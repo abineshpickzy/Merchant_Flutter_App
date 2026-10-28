@@ -3365,7 +3365,319 @@ In the Flutter `image_picker_android` plugin, the `useAndroidPhotoPicker` flag d
   - `flutter analyze`: **0 issues found (100% clean in 8.3s)**.
   - Full test suite `flutter test`: **157/157 tests passed (100%)**.
 
+---
+
+## Phase 130 - Complete Store Order Module 1:1 Android UI, Navigation, Details Screens & API Parity
+**Date**: October 27, 2026
+- **Requirements & Implementation**:
+  1. **Complete Order API Endpoints Alignment ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - Added all missing Android `ApiService.java` order endpoints:
+       - `orderDirectDispatched` (`POST order/dispatched`)
+       - `orderUpdateMfdExp` (`PATCH order/updateMfdExp`)
+       - `orderMsgTemplate` (`POST order/msgTemplate`)
+       - `orderSendMessage` (`POST order/message`)
+       - `orderInvoiceSent` (`POST order/invoice/sent`)
+       - `orderNotesDownloadUrl(String filename)` (`GET order/notes/download?file=...`)
+       - `orderEscalateOrder` (`PATCH order/escalate/escalateOrder`)
+       - `orderEscalateAcceptProduct` (`PATCH order/escalate/acceptProduct`)
+       - `orderEscalateProduct` (`PATCH order/escalate/escalateProduct`)
+       - `orderEscalateRefundProduct` (`PATCH order/escalate/refundProduct`)
+       - `orderEscalateRefundProductRequest` (`PATCH order/escalate/refundProductRequest`)
+       - `orderEscalateViewCorrespondence` (`POST order/escalate/viewCorrespondence`)
+  2. **Expanded Domain Models ([`order_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/model/order_model.dart))**:
+     - Added `MfdExpDate`, `MfdExpInfo`, `CustomerContactTemplate`, and `EscalationChatMessage` models.
+     - Extended `OrderModel` with `deliveredAt`, `cancelledAt`, `rejectedAt`, `deniedAt`, `verifiedAt`, `orderStatusText`, `rating`, `refundRequestInitiate`, `dateGroupHeader` (matching `NewOrderHeaderAdapter`), and timestamp formatters.
+     - Extended `OrderProductItem` with `mfdExp`, `resolute`, `imageKeyId`, and `escalatedTotalPrice`.
+  3. **Repository & Riverpod State Management ([`orders_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/repository/orders_repository.dart) & [`orders_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/controller/orders_controller.dart))**:
+     - Added providers `isMoreMenuOpenProvider`, `orderInDeliveryQueueProvider`, `deliveryPersonInfoProvider`, `contactTemplatesProvider`, and `escalationChatProvider`.
+     - Extended `OrderActionController` with `escalateOrder`, `autoAssignOrder`, `updateProductMfdExp`, `markReadyToShip` (supporting both `readyToShipOrder` and `directDispatchOrder`), `acceptEscalatedProduct`, `escalateProduct`, `refundEscalatedProduct`, `sendCustomerMessage`, and `generateInvoice`.
+  4. **5-Button Tab Bar & `More..` Sub-Navigation ([`orders_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/orders_screen.dart) & [`orders_list_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/views/orders_list_view.dart))**:
+     - Implemented Android's 5-tab bar (`New Order`, `Packaging`, `Dispatched`, `On the way`, `More..`) with multi-line live counts `(N)` and `MoreFragment` (`Delivered`, `Replace/Refund`, `Cancelled`) sub-navigation with back toolbar.
+     - Added date section grouping headers (`Today`, `Yesterday`, `X Days Ago`, `dd MMM yyyy`) in `New Order`.
+  5. **Status-Specific Order Cards**:
+     - [`new_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/new_order/new_order_card.dart) (`single_new_order.xml`)
+     - [`packaging_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/packaging/packaging_order_card.dart) (`PackageAdapter` + `adapter_package.xml`)
+     - [`dispatched_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/dispatched/dispatched_order_card.dart) (`DispatchAdapter` + `adapter_package.xml`)
+     - [`on_the_way_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/on_the_way/on_the_way_order_card.dart) (`OntheWayAdapter` + `adapter_ontheway.xml`)
+     - [`delivered_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/delivered/delivered_order_card.dart) (`DeliveryAdapter` + `adapter_delivery.xml` with `Delivered on` and 5-star `Customer Rating`)
+     - [`replacement_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/replacement/replacement_order_card.dart) (`ReplacementAdapter` + `adapter_replacement.xml`)
+     - [`cancelled_order_card.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/cancelled/cancelled_order_card.dart) (`CancelAdapter` + `adapter_cancel.xml`)
+  6. **Status-Specific Full-Screen Order Details, Info Screen & Dialogs**:
+     - [`new_order_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/new_order/new_order_details_screen.dart) (`OrderDetailFragment`)
+     - [`packaging_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/packaging/packaging_details_screen.dart) (`PackageDetailsFragment`)
+     - [`dispatched_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/dispatched/dispatched_details_screen.dart) (`DispatchDetailsFragment`)
+     - [`on_the_way_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/on_the_way/on_the_way_details_screen.dart) (`OntheWayDetailsFragment`)
+     - [`delivered_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/delivered/delivered_details_screen.dart) (`DeliveryDetailsFragment`)
+     - [`replacement_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/replacement/replacement_details_screen.dart) & [`replacement_reason_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/replacement/replacement_reason_screen.dart) (`ReplacementDetailsFragment` & `ReplacementReasonFragment`)
+     - [`cancelled_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/cancelled/cancelled_details_screen.dart) (`CancelDetailFragment`)
+     - [`order_info_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/order_info_screen.dart) (`PackageOrderDetailsFragment` / `customer_ordered_detail_layout.xml`)
+     - [`mfd_exp_dialog.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/mfd_exp_dialog.dart) & [`customer_info_dialogs.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/customer_info_dialogs.dart)
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean in 14.1s)**.
+
+---
+
+## Phase 131 - Authenticated Network Image Loading, Full Product Info & Reviews Screen, and 1:1 Order Details UI/Data Parity
+**Date**: October 27, 2026
+- **Root Causes Identified & Fixed**:
+  1. **Customer Avatar & Product Network Images Not Visible ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart), [`orders_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/controller/orders_controller.dart), [`order_card_parts.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/order_card_parts.dart))**:
+     - **Root Cause**: In the Android app (`BaseActivity.java`), every customer avatar, wholesale avatar, product image, inventory image, escalated chat image, and customer note attachment is loaded via `GlideUrl` with a `LazyHeaders` `Authorization: <schema> <token>` header and dynamic format detection (`getFormatFromFilename`). In Flutter, `Image.network` was called without the `Authorization` header, `OrderProductItem.imageUrl` returned the raw filename instead of the full endpoint URL, and `ApiEndpoints.customerImageUrl` hardcoded `format=webp`.
+     - **Fix**:
+       - Added `ApiEndpoints.imageFormatFromFilename`, `ApiEndpoints.customerImageUrl(filename, {isWholesale})`, `ApiEndpoints.productImageUrl`, `ApiEndpoints.inventoryImageUrl`, `ApiEndpoints.escalatedImageUrl`, and `ApiEndpoints.orderNoteImageUrl` matching `BaseActivity.java`.
+       - Added `orderAuthHeadersProvider` in `orders_controller.dart` reading `secureStorageServiceProvider` (`$schema $token`).
+       - Updated `OrderAvatar` and `OrderAvatarWidget` (`ConsumerWidget`) and created `OrderProductImageWidget` (`ConsumerWidget`) to pass `headers: authHeaders` to `Image.network`.
+  2. **1:1 Product Info & Reviews Screen ([`order_product_info_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/order_product_info_screen.dart))**:
+     - Replaced the temporary alert popup with the full-screen `OrderProductInfoScreen` matching Android's `ProductFragment.java` (`product_fragment.xml`), `ProductInfo.java` (`fragment_product_info.xml` + `single_text_textview.xml`), and `ReviewFragment.java` (`fragment_review.xml`):
+       - Toolbar title `"Product - <product_name>"`.
+       - Top 6-slot product image strip (`#FAFAFA`, `85dp` height) with tap-to-zoom full-screen `PageView` + `InteractiveViewer` dialog (`alert_zoom.xml`).
+       - 2-Tab selector (`Product Info` | `Reviews`).
+       - `Product Info` tab: calls `POST product/avg_price/avg_rating` and `GET inv/$categoryId/$storeId/$productId/$type/vw`; renders the top bordered summary box with 3 pills (`Average price : ₹...`, `Total product sold: Not Applicable`, `Avg. Rating :` + 5-star bar), UPC/SKU pill with clipboard copy button (`"UPC Copied"`), and dynamic `34% : 66%` attribute table rows.
+       - `Reviews` tab: calls `POST inv/view/reviews`; renders the 160dp overall rating + 5-star to 1-star progress bar breakdown and customer review list (or `"No Reviews"` when empty).
+  3. **Order Details Screen UI & Data/Logic Parity Across All 7 Status Tabs**:
+     - **`Total Products` Calculation**: Fixed across [`new_order_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/new_order/new_order_details_screen.dart), [`packaging_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/packaging/packaging_details_screen.dart), [`dispatched_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/dispatched/dispatched_details_screen.dart), [`on_the_way_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/on_the_way/on_the_way_details_screen.dart), [`delivered_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/delivered/delivered_details_screen.dart), [`replacement_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/replacement/replacement_details_screen.dart), and [`cancelled_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/cancelled/cancelled_details_screen.dart) to sum product quantities (`escalatedQty` when escalated, else `quantity`) instead of `products.length`.
+     - **Product Card Net Price & MFD/EXP Layout**: Updated all product adapters to display `₹ <netPrice>` (or ` Rs -<netPrice>` in red for replacement items on Delivered Details) and added `OrderMfdExpLabelsRow` matching Android's 2-column `Manufacture :` / `Expiry :` layout with `#f23b3b` (red) and `#63C900` (green) values.
+     - **Escalation Status Codes (`AppConstants.java` 1..8)**: Aligned all escalation status labels, colors, `Reason` button visibility, `Refund` button visibility, and Packaging `Accepted`/`Declined` switches with Android's `ESCALATION_CLIENT (1)` through `ESCALATION_TEMPLATE_ACCEPT (8)`.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
 
 
 
+
+
+
+
+---
+
+## Phase 132 - Customer Notes & Attachments Button, JSON Key Mapping, and `alert_notes.xml` Dialog Parity
+**Date**: October 27, 2026
+- **Root Causes Identified & Fixed**:
+  1. **Critical Backend JSON Key Mismatch in `OrderModel.fromJson` ([`order_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/model/order_model.dart))**:
+     - **Root Cause**: In the Android app (`PackageNewResponse.java` lines 597–622), the `notes` object has keys `@SerializedName("text")` and `@SerializedName("image")`. Flutter's `OrderModel.fromJson` was reading `json['notes']['notes']` and `json['notes']['file']`, causing `order.notes` and `order.notesFile` to evaluate to `null` on real API responses and hiding the `Note` / `Customer Notes` button across all order screens.
+     - **Fix**: Updated `OrderModel.fromJson` to read `notesMap['text'] ?? notesMap['notes']` and `notesMap['image'] ?? notesMap['file']`, and added `hasNotes` (`bool`) + `hasCustomerNotes` getter matching Android's `if (docs.getNotes() != null)` visibility condition.
+  2. **`Note` / `Customer Notes` Button Placement & Styling Across All Order Screens**:
+     - **New Order Details ([`new_order_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/new_order/new_order_details_screen.dart))**: Matches `OrderDetailFragment.java` + `order_details_fragment.xml` (`btn_notes`: label `"Note"`, white background with grey border `@drawable/cancel_order`, visible when `order.hasCustomerNotes`).
+     - **Packaging Details ([`packaging_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/packaging/packaging_details_screen.dart))**: Matches `PackageDetailsFragment.java` + `fragment_package_deatil.xml` (`btn_notes`: label `"Customer Notes"`, white background with grey border `@drawable/cancel_order`, visible when `order.hasCustomerNotes`).
+     - **Dispatched Details ([`dispatched_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/dispatched/dispatched_details_screen.dart))**: Matches `DispatchDetailsFragment.java` + `fragment_dispatch_details.xml` (`btn_notes`: label `"Customer Notes"`, white background with grey border `@drawable/cancel_order`, visible when `order.hasCustomerNotes`).
+     - **On The Way Details ([`on_the_way_details_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/on_the_way/on_the_way_details_screen.dart))**: Matches `OntheWayDetailsFragment.java` + `fragment_on_the_way_details.xml` (`btn_notes`: label `"Customer Notes"`, white background with grey border `@drawable/cancel_order`, visible when `order.hasCustomerNotes`).
+     - **Order Info Screen ([`order_info_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/order_info_screen.dart))**: Matches `PackageOrderDetailsFragment.java` + `customer_ordered_detail_layout.xml`:
+       - `Customer Notes` button visible when `order.hasCustomerNotes` with trailing paperclip icon (`Icons.attach_file` / `@drawable/ic_attach_file`), background `#D4F8AD`, border `#4CAF50` (`@drawable/customer_notes_bg`).
+       - Updated `Contact Customer` (`#C0EAFD` / `#0275D8`), `Address` (`#E5D1FF` / `#673AB7`), and `Send Cancel Request` (`#FFABB2` / `#E91E63`) button colors to match their exact Android drawable XMLs, plus `Delivery Mode` (`| Contact Less Delivery` suffix) and `Shop Expected Delivery Time` (`-` fallback).
+  3. **`Notes and Attachments` Dialog (`alert_notes.xml` + `BaseFragment.showAlertNotes`) ([`customer_info_dialogs.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/orders/view/widgets/customer_info_dialogs.dart), [`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - Immediately displays the `200x200` authenticated note image (`order/notes/image?width=500&format=...&file=...`) at the top of the dialog when `order.notesFile` is present (`BaseFragment.java` lines 242–246).
+     - Renders the note text centered below (`minHeight: 32`, `12sp` bold black).
+     - Always shows both `Close` (`80dp` width) and `Attachments` buttons in the bottom-right footer row (`alert_notes.xml` lines 97–130).
+     - Tapping `Attachments` downloads the note file via `GET order/notes/download?file=<fileName>` (`ApiEndpoints.orderNoteDownloadUrl`) and shows `"File downloaded."` when an attachment exists, or `"No attachments"` when `order.notesFile` is empty (`BaseFragment.java` lines 182–264).
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+
+
+---
+
+## Phase 133 - Delivery Associate Info Screen Parity (DeliveryPersonCurrentLocationActivity)
+**Date**: October 27, 2026
+- **Root Cause & Requirements**:
+  1. In the Flutter app, clicking \Delivery Info\ was previously showing a simple \AlertDialog\ popup with textual details instead of launching the full dedicated screen.
+  2. In the Android app (\PackageDetailsFragment\, \DispatchDetailsFragment\, \OntheWayDetailsFragment\), clicking \R.id.delivery_info\ launches \DeliveryPersonCurrentLocationActivity.java\ with layout \ctivity_delivery_person_current_location.xml\.
+  3. The response payload from \GET order/user/{u_id}/info\ returns \data\ as a JSON array (\List<personRspDetail>\). Flutter's \OrdersRepository.fetchDeliveryPersonInfo\ was expecting \data\ to be a Map, preventing avatar and coordinates from being parsed.
+- **Implementations & Architectural Parity**:
+  1. **\OrdersRepository.fetchDeliveryPersonInfo\**: Updated JSON extractor to inspect \
+awData is List\ and safely extract the first associate object.
+  2. **\DeliveryPersonLocationScreen\**: Created full screen with 45dp AppBar displaying associate's full name (\Nunito\ bold, white).
+     - **Top Card (\R.id.delivery_person_detail\)**: 54x54 circular avatar (\ApiEndpoints.deliveryPersonAvatarUrl\) with 1dp border; Online status indicator badge (\online_time\ calculation: Green dot for < 3 mins, Orange dot for <= 30 mins, Grey dot for > 30 mins); Bold name and Order ID display; Blue circular phone call button (\#2196F3\ / \ic_phone_img\) triggering phone dialer via \url_launcher\.
+     - **Interactive Map (\R.id.map\)**: \GoogleMap\ widget displaying associate's live coordinates (\[lng, lat]\ parsed from GeoJSON Point) with camera zoom 17 and custom marker.
+  3. **\CustomerInfoDialogs.showDeliveryPersonInfo\**: Directly navigates to \DeliveryPersonLocationScreen.open(context, order: order)\ across all order detail screens.
+- **Verification Results**:
+  - \lutter analyze\: **0 issues found (100% clean)**.
+
+
+---
+
+## Phase 134 - Packaging Barcode Scanner, MFD/EXP Infinite Constraints Crash Fix & Order Action Buttons Parity
+**Date**: October 28, 2026
+- **Issues Identified & Fixed**:
+  1. **Barcode Scanner to MFD/EXP Dialog Crash**:
+     - Fixed `RenderPhysicalShape` crash with infinite constraints (`BoxConstraints(w=Infinity, 48.0<=h<=Infinity)`) when opening [`MfdExpDialog`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/orders/view/widgets/mfd_exp_dialog.dart) after scanning a product barcode.
+     - Properly bounded dialog action buttons with explicit height and width constraints.
+     - Ensured barcode scan matches update product verified status and date overrides dynamically.
+  2. **Order Bottom Action Buttons Parity (`PackageDetailsFragment.java`)**:
+     - Aligned bottom buttons ("Assign to Associate", "Click here to dispatch order", "Order in delivery queue", "Associate Assigned") across order details with native Android conditions.
+     - Verified condition-based visibility for "Customer Notes" and "Delivery Info" buttons (hidden on Delivered orders, visible on Packaging/Dispatched/On The Way orders).
+     - Product card verification checkmarks, status texts, and action buttons synchronized across all order status details screens (New Order, Packaging, Dispatched, On The Way, Delivered, Replace/Refund, Cancelled).
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+
+---
+
+## Phase 135 - Native Android Layout Parity & Scalable Modular Tabs Folder Reorganization
+**Date**: October 28, 2026
+- **Architecture & Root Causes Identified**:
+  1. **Root Activity vs. Tab AppBars Parity**:
+     - In native Android (`StoreOrdersActivity.java` + `activity_store_orders.xml`), the root activity has **NO top Toolbar**; it only hosts the `CustomViewPager` and bottom `TabLayout` (55dp).
+     - In native Android, each individual tab fragment defines its own 45dp Toolbar (`fragment_overview.xml`, `order_fragment.xml`, `fragment_inventory.xml`, `fragment_store_billing.xml`, `shop_setting_fragment.xml`).
+     - Previously in Flutter, `StoreScreen` had a single global `AppBar` on its root `Scaffold`, while tab views lacked individual headers.
+  2. **Order Details Screen Hosting Inside Orders Tab**:
+     - In native Android (`OrdersFragment.java` lines 332–338), clicking an order card calls `getChildFragmentManager().beginTransaction().replace(R.id.parentLayout, fragment).addToBackStack("order_details").commit()`.
+     - The order details screen replaces the Orders list and sub-tabs **inside the Orders tab**, while the bottom 5-tab navigation bar **remains persistently visible**.
+     - Previously in Flutter, order cards called `Navigator.of(context).push(...)` pushing on the root Navigator and hiding the bottom navigation bar.
+- **Implementations**:
+  1. **Reusable Native Toolbar ([`store_tab_app_bar.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/widgets/store_tab_app_bar.dart))**:
+     - Created a 45dp bar with background `#F5F5F5`, left `home.png` leading button (popping to first route / store list), centered 14sp bold `ProductSans` title in `#616161`, and a 1dp `#E0E0E0` bottom divider.
+  2. **Refactored `StoreScreen` ([`store_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/store_screen.dart))**:
+     - Removed the root `AppBar` from `StoreScreen` `Scaffold`.
+     - Hosts purely the `IndexedStack` and the 5-tab `BottomNavigationBar` (Dashboard, Orders, Inventory, Billing, More..).
+  3. **Individual Tab AppBars**:
+     - [`StoreDashboardTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/storedashboard/view/store_dashboard_tab_view.dart): `<StoreName>`
+     - [`OrdersScreen`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/orders/view/orders_screen.dart): `<StoreName> - Orders`
+     - [`StoreInventoryTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/inventory/view/store_inventory_tab_view.dart): `<StoreName> - Inventory`
+     - [`StoreBillingTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/store_billing_tab_view.dart): `<StoreName> - Transactions`
+     - [`StoreSettingsTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/store_settings_tab_view.dart): `<StoreName> - Settings`
+  4. **Nested Navigation Inside Orders Tab**:
+     - Implemented a nested `Navigator` with a dedicated `GlobalKey<NavigatorState>` and `PopScope` inside `OrdersScreen`.
+     - Order details screens are pushed inside this tab-level navigator, keeping the bottom 5-tab bar visible at all times.
+     - Back navigation (app bar back button or system back gesture) pops the child details screen back to the orders list and preserves active sub-tab state.
+  5. **Scalable Modular Tabs Folder Structure**:
+     - Reorganized `lib/features/store/view/tabs/` into dedicated feature subfolders:
+       - `storedashboard/view/`
+       - `orders/` (entire self-contained module with `controller/`, `model/`, `repository/`, and `view/`)
+       - `inventory/view/`
+       - `billings/view/`
+       - `settings/view/`
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test`: All store tests passing (**100% pass rate**).
+
+
+---
+
+## Phase 136 - Orders "More.." Sub-Tabs Dedicated Screen & Invoice 5-Button Popup Parity with Native Sharing
+**Date**: October 28, 2026
+- **Architecture & Root Causes Identified**:
+  1. **"More.." Sub-Tabs Screen Display Parity (`MoreFragment.java` & `fragment_more.xml`)**:
+     - In native Android, tapping any of the 3 sub-tabs under `More..` (`Delivered`, `Replace/Refund`, `Cancelled`) calls `InitializeFragment()`, replacing the 5-button tab row with a dedicated full sub-screen inside the Orders tab (`DeliveryFragment`, `ReplacementFragment`, or `CancelFragment`).
+     - This separate screen has its own 45dp native toolbar (`<- Delivered`, `<- Replace/Refund`, `<- Cancelled`) with a back arrow that returns to the `More..` menu, while keeping the root 5-tab bottom navigation bar persistently visible.
+     - Previously in Flutter, tapping a sub-tab kept the top 5-button tab row visible and squeezed the list underneath.
+  2. **Invoice Sharing Crash & 5-Button Popup Architecture (`layout_popup_window.xml`)**:
+     - In native Android (`layout_popup_window.xml`), tapping the invoice icon opens a dialog with 5 buttons:
+       1. `Share Invoice` (`#E8F4FD` light blue bg, `#2196F3` border, `#2196F3` bold text).
+       2. `Send to Seller/Customer` (`#E8F4FD` light blue bg, `#2196F3` border, `#2196F3` bold text).
+       3. `Print Invoice` (`#E8F4FD` light blue bg, `#2196F3` border, `#2196F3` bold text) -> "Coming Soon".
+       4. `Cancel` (`#E53935` solid red bg, white bold text) -> dismisses popup.
+       5. `Printer Setting` (`#0275D8` solid blue bg, white bold text) -> "Coming Soon".
+     - In native Android (`DeliveryDetailsFragment.java`), `generatePdfFile` with `flag = 1` calls the API and returns an HTML string (`item.getData()`), which Android writes to a temporary file and launches the native `ACTION_SEND` intent with MIME type `application/pdf` or `text/html`.
+     - In Flutter, the previous implementation dumped the raw backend response string (which was HTML markup) directly into `AppSnackBar.showSuccess(context, res)`, causing constraint overflows and crashes. Furthermore, native sharing was never executed.
+- **Implementations**:
+  1. **Dedicated Sub-Orders Screen ([`orders_screen.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/orders/view/orders_screen.dart))**:
+     - Implemented `MoreSubOrdersScreen` which pushes onto the nested `Navigator` inside `OrdersScreen`.
+     - Features its own 45dp toolbar (`#F5F5F5`, back arrow, centered title `Delivered` / `Replace/Refund` / `Cancelled`, bottom divider `#E0E0E0`).
+     - Replaces the 5-button tab bar while preserving the persistent bottom 5-tab navigation bar.
+  2. **Invoice 5-Button Popup Dialog ([`customer_info_dialogs.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/orders/view/widgets/customer_info_dialogs.dart))**:
+     - Built `_PopupWindowButton` matching `layout_popup_window.xml` dimensions (38dp height, 3dp radius, uppercase/bold Nunito font, colored borders and backgrounds).
+     - Standardized `OrdersRepository.generateInvoice` and `OrderActionController.generateInvoice` to return `InvoiceResult` containing `isSuccess`, `data`, and `message`.
+     - Integrated `share_plus` (`SharePlus.instance.share(ShareParams(...))`) with `path_provider`:
+       - If the API returns a URL, shares the link directly.
+       - If the API returns raw HTML string data, caches it to `${tempDir.path}/${order.orderId}-$dateStr-Invoice.html` and shares via `ShareParams(files: [XFile(..., mimeType: 'text/html')])`.
+       - For `flag = 2` ("Send to Seller/Customer"), displays a success message via `AppSnackBar.showSuccess(context, result.message)`.
+       - For "Print Invoice" and "Printer Setting", cleanly displays `AppSnackBar.showError(context, 'Coming Soon')`.
+  3. **Tab Views UI Restoration**:
+     - Restored the body content for `StoreInventoryTabView`, `StoreBillingTabView`, and `StoreSettingsTabView` while retaining individual `StoreTabAppBar` instances.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test`: **152/152 tests passed (100% pass rate)**.
+
+
+---
+
+## Phase 137 - Store Billing & Transactions Screen MVC Architecture & 1:1 Android Visual Parity
+**Date**: October 28, 2026
+- **Architecture & Root Causes Identified**:
+  1. **Android Parity (`StoreBillingFragment.java` & `fragment_store_billing.xml`)**:
+     - Screen comprises 4 distinct sections: 45dp native Toolbar (`StoreTabAppBar`), Date filter header with 3 segmented quick filters (`Today`, `Last 7 Days`, `Last 30 Days`) and custom date pickers (`From` / `To` / `Go`), a paginated transaction history list (`merchant/transactions`), and a bottom calculation summary card (`merchant/accounts`).
+     - Previously in Flutter, the billing tab was a static placeholder with no API connection, no date filters, and no transaction list.
+  2. **Card & Details Dialog Parity (`single_history_transactions.xml` & `alert_history_transaction.xml`)**:
+     - Each transaction item card renders a 90x90 store/category image, Order ID, Purchase Amount, Service Fee, Credit/Debit date, Value (`₹ <amount>`), Status (`Pending` / `Credited` / `Debited`), and an underlined blue `Invoice` link.
+     - Tapping `Invoice` opens a transaction breakdown dialog showing store location, order ID, purchase date, delivery date, purchase amount, tip amount, payment mode, service fee, applied offers (cashback/discount), and total credit/debit amount with an `OK` dismiss button.
+- **Implementations**:
+  1. **API Endpoints ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - Added `merchantTransactions = 'merchant/transactions'`
+     - Added `merchantAccounts = 'merchant/accounts'`
+     - Added `categoryImageUrl(String filename)` helper matching Android `BaseActivity.loadCategoryImage`.
+  2. **Model ([`billing_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/model/billing_model.dart))**:
+     - Implemented models for `BillingFilterType`, `BillingOffer`, `BillingTransactionDetail`, `BillingOrder`, `BillingShop`, `BillingTransaction`, `BillingSummaryModel`, and `BillingState`.
+  3. **Repository ([`billing_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/repository/billing_repository.dart))**:
+     - `getTransactions(...)`: Calls `POST merchant/transactions` with `from`, `to`, `skip`, `limit`, and `shop_id`.
+     - `getAccountsSummary(...)`: Calls `POST merchant/accounts` with `from`, `to`, and `shop_id`.
+  4. **Controller ([`billing_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/controller/billing_controller.dart))**:
+     - Riverpod `StateNotifier` managing active filter type, date ranges formatted as `yyyy-MM-dd HH:mm:ss.SSS`, paginated list loading, lazy scroll pagination (`loadMore`), and pull-to-refresh.
+  5. **Widgets & Main Screen ([`view/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/))**:
+     - [`BillingDateFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_date_filter_header.dart): 35dp segmented tabs + custom `From`/`To` date pickers with calendar icons and `Go` button.
+     - [`BillingSkeletonLoader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_skeleton_loader.dart): Smooth multi-card skeleton shimmer using `package:shimmer/shimmer.dart` rendered while transactions are fetching.
+     - [`BillingTransactionCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_transaction_card.dart): Dynamic background color (`#FAFAFA` for settled, `#E0E0E0` for pending), 85x85 thumbnail loaded with `authHeaderProvider` headers and inline shimmer placeholder, order ID, amount, fees, status, and underlined blue `Invoice` button.
+     - [`BillingTransactionDetailsDialog`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_transaction_details_dialog.dart): 2-column key-value transaction breakdown with close button and `OK` action button.
+     - [`BillingSummaryCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_summary_card.dart): `#E6F8FB` cyan background with `#32C7DA` 1dp border displaying Total debits, Total credits, Pending debits, and Pending credits.
+     - [`StoreBillingTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/store_billing_tab_view.dart): Hosts `StoreTabAppBar` (`Billing - <StoreName>`), date filter header, full list shimmer skeleton (`BillingSkeletonLoader`), pull-to-refresh transaction list, empty state `"No records found!"`, and bottom summary card.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test`: **All tests passed (100% pass rate)**.
+
+
+---
+
+## Phase 138 - Store Settings Tab MVC Architecture & 1:1 Android Visual Parity with Sub-Page Architecture
+**Date**: October 28, 2026
+- **Architecture & Android Parity Analysis (`SettingsFragment.java` & `shop_setting_fragment.xml`)**:
+  1. **Visual Hierarchy & Entry Layout**:
+     - Screen comprises 40dp navigation rows with right chevron arrows (`>`) and `#EEEEEE` 1dp dividers for quick actions (`Order History`, `Message`).
+     - Distinct section header bars in light gray `#EEEEEE` with bold 13sp titles (`<Category> Settings`, `Common`, `Private Shop Settings`, `Agency Settings`).
+     - Branded Shop Card (120dp height) featuring 104x104 thumbnail loaded with authenticated Bearer headers, store display name, category name, store type, and right chevron arrow to access detailed store settings.
+     - Settings options: `Shop Delivery Settings`, `Additional Settings`, `Licence Details`, `About Shop`, and `Configure Shop UI`.
+     - Conditional sections:
+       - Private Shop Card with inline switch toggle (`is_open`) and confirmation prompt.
+       - Agency Settings with `Detach Store` row and detachment dialog.
+     - Fixed Bottom Control Bar (`layout_shop_open_close`) pinned above the bottom navigation bar:
+       - Busy Switch (`shop_busy_switch` with red `#D32F2F` active color and customer delay advisory alert).
+       - Shop Close / Open Switch (`switch_shop_close` with green `#148E13` active color, verifying store review/payment statuses before toggling).
+  2. **Sub-Page Navigation Strategy**:
+     - Created modular placeholder screens for all 9 child destinations with `StoreTabAppBar` and back navigation, establishing the exact file structure so each screen can be built out one-by-one in subsequent phases without breaking routing.
+- **Implementations**:
+  1. **API Endpoints ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - Added `shopViewBasic = 'shop/view/basic'`
+     - Added `shopEdit = 'shop/edit'`
+     - Added `shopRemove = 'shop/remove'`
+     - Added `shopPaymentInfo = 'merchant/payment/info'`.
+  2. **Model ([`setting_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/model/setting_model.dart))**:
+     - `SettingData`: ID, display name, category name, category type, category image, open status, busy status, review/payment status, agency deliver flag, and private shop model.
+     - `PrivateShopModel`: icon, open state, enabled flag, status, and authenticated image URL constructor.
+     - `SettingUpdateRequest`: structured payload for `shop/edit`.
+     - `SettingState`: reactive state model with loading, updating, data, and error indicators.
+  3. **Repository ([`setting_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/repository/setting_repository.dart))**:
+     - `getSettingBasic(...)`: `POST shop/view/basic`.
+     - `updateSetting(...)`: `POST shop/edit`.
+     - `detachShop(...)`: `POST shop/remove`.
+     - `checkShopPay(...)`: `POST merchant/payment/info`.
+  4. **Controller ([`setting_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/controller/setting_controller.dart))**:
+     - Riverpod `StateNotifier` managing initial fetch, optimistic toggles with rollback on failure, open/close shop flow, busy status toggle, and store detachment.
+  5. **Widgets ([`view/widgets/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/))**:
+     - [`SettingMenuRow`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/setting_menu_row.dart): 42dp white row with 13sp label, right chevron arrow, and 1dp divider.
+     - [`SettingSectionHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/setting_section_header.dart): `#EEEEEE` bar with bold 13sp title.
+     - [`BrandedShopCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/branded_shop_card.dart): 120dp card with 104x104 thumbnail, title, category, type, and right chevron.
+     - [`PrivateShopCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/private_shop_card.dart): Private store icon, labels, and switch.
+     - [`SettingsBottomBar`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/settings_bottom_bar.dart): Pinned bottom bar with Red Busy switch and Green Shop Close/Open switch.
+     - [`SettingsSkeletonLoader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/widgets/settings_skeleton_loader.dart): White container card with inner shimmering placeholders.
+  6. **Subpage Placeholders ([`view/subpages/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/))**:
+     - [`OrderHistoryView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/order_history_view.dart)
+     - [`StoreMessagesView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/store_messages_view.dart)
+     - [`StoreDetailsSettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/store_details_setting_view.dart)
+     - [`StoreDeliverySettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/store_delivery_setting_view.dart)
+     - [`AdditionalSettingsView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/additional_settings_view.dart)
+     - [`LicenceDetailsView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/licence_details_view.dart)
+     - [`ShopInfoView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/shop_info_view.dart)
+     - [`ConfigureShopUiView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/configure_shop_ui_view.dart)
+     - [`ApiKeysView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/subpages/api_keys_view.dart)
+  7. **Main Screen ([`StoreSettingsTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/view/store_settings_tab_view.dart))**:
+     - Integrates top `StoreTabAppBar`, pull-to-refresh, skeleton shimmer loader, full section list, modal confirmation dialogs for Busy and Open/Close states, and pinned bottom bar.
+  8. **Common App Bar Enhancement ([`store_tab_app_bar.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/widgets/store_tab_app_bar.dart))**:
+     - Added optional `leading` parameter with default fallback to the standard home button, allowing all sub-screens to cleanly show back navigation buttons.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
 

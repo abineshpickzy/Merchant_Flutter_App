@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../orders/model/order_model.dart';
+import 'package:bayfay_merchant_flutter/features/store/view/tabs/orders/model/order_model.dart';
 import 'cancel_reason_model.dart';
 import 'dashboard_date_filter.dart';
 import 'order_message_template_model.dart';

@@ -4,20 +4,22 @@ import 'package:bayfay_merchant_flutter/app/theme/app_colors.dart';
 import 'package:bayfay_merchant_flutter/core/constants/app_strings.dart';
 import '../../dashboard/controller/dashboard_controller.dart';
 import '../../dashboard/model/store_model.dart';
-import 'package:bayfay_merchant_flutter/features/orders/view/orders_screen.dart';
 import '../controller/store_controller.dart';
-import 'tabs/store_dashboard_tab_view.dart';
-import 'tabs/store_inventory_tab_view.dart';
-import 'tabs/store_billing_tab_view.dart';
-import 'tabs/store_more_tab_view.dart';
+import 'tabs/storedashboard/view/store_dashboard_tab_view.dart';
+import 'tabs/orders/view/orders_screen.dart';
+import 'tabs/inventory/view/store_inventory_tab_view.dart';
+import 'tabs/billings/view/store_billing_tab_view.dart';
+import 'tabs/settings/view/store_settings_tab_view.dart';
 
 /// Primary Store Screen (`StoreScreen`) providing a 5-tab dashboard shell for an active store.
 /// 
 /// Located under feature directory `lib/features/store/`.
 /// 
-/// Includes:
-/// - Custom AppBar displaying store name with back leading arrow and Home action button.
-/// - 5-tab BottomNavigationBar (Dashboard, Orders, Inventory, Billing, More).
+/// Matches native Android `StoreOrdersActivity` (activity_store_orders.xml):
+/// - Root activity has NO AppBar; each tab fragment defines its own individual 45dp Toolbar.
+/// - 5-tab persistent BottomNavigationBar (Dashboard, Orders, Inventory, Billing, More).
+/// - IndexedStack preserving active tab state across switches.
+/// - Selected store context provided to Riverpod [selectedStoreProvider].
 /// - IndexedStack preserving active tab state across switches.
 /// - Selected store context provided to Riverpod [selectedStoreProvider].
 class StoreScreen extends ConsumerStatefulWidget {
@@ -52,47 +54,33 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     }
   }
 
+  Widget _buildOrdersTabIcon({required bool isSelected, required int count}) {
+    final icon = Image.asset(
+      'assets/images/ic_orders_icons.png',
+      width: 22,
+      height: 22,
+      color: isSelected ? const Color(0xFF007AFF) : const Color(0xFF616161),
+      fit: BoxFit.contain,
+    );
+
+    if (count <= 0) return icon;
+
+    return Badge(
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      textStyle: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+      label: Text('$count'),
+      child: icon,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedStore = widget.store ?? ref.watch(selectedStoreProvider);
-    final storeName = selectedStore?.displayName ?? AppStrings.appName;
-     final appBarTitle = _currentTabIndex == 1 ? '$storeName - Orders' : storeName;
+    final int newOrdersCount = selectedStore?.newOrderCount ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.home_rounded,
-            color: AppColors.primary,
-            size: 28,
-          ),
-          tooltip: 'Back to Stores',
-          onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-        ),
-        title: Text(
-          appBarTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: const [],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1.0),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFE0E0E0),
-          ),
-        ),
-      ),
       body: Builder(
         builder: (context) {
           if (selectedStore != null) {
@@ -103,7 +91,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 const OrdersScreen(),
                 StoreInventoryTabView(store: selectedStore),
                 StoreBillingTabView(store: selectedStore),
-                StoreMoreTabView(store: selectedStore),
+                StoreSettingsTabView(store: selectedStore),
               ],
             );
           }
@@ -146,36 +134,78 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: const Color(0xFF757575),
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
+        selectedItemColor: const Color(0xFF007AFF), // Android select_tab
+        unselectedItemColor: const Color(0xFF616161), // Android tool_text
+        selectedFontSize: 10,
+        unselectedFontSize: 10,
         elevation: 8,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
+            icon: Image.asset(
+              'assets/images/ic_dash_icons.png', // Android ic_dash_icons
+              width: 22,
+              height: 22,
+              color: const Color(0xFF616161),
+              fit: BoxFit.contain,
+            ),
+            activeIcon: Image.asset(
+              'assets/images/ic_dash_icons.png',
+              width: 22,
+              height: 22,
+              color: const Color(0xFF007AFF),
+              fit: BoxFit.contain,
+            ),
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_outlined),
-            activeIcon: Icon(Icons.receipt_long),
+            icon: _buildOrdersTabIcon(
+              isSelected: false,
+              count: newOrdersCount,
+            ),
+            activeIcon: _buildOrdersTabIcon(
+              isSelected: true,
+              count: newOrdersCount,
+            ),
             label: 'Orders',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2_outlined),
-            activeIcon: Icon(Icons.inventory_2),
+            icon: Image.asset(
+              'assets/images/inventory.webp', // Android inventory
+              width: 22,
+              height: 22,
+              color: const Color(0xFF616161),
+              fit: BoxFit.contain,
+            ),
+            activeIcon: Image.asset(
+              'assets/images/inventory.webp',
+              width: 22,
+              height: 22,
+              color: const Color(0xFF007AFF),
+              fit: BoxFit.contain,
+            ),
             label: 'Inventory',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.point_of_sale_outlined),
-            activeIcon: Icon(Icons.point_of_sale),
+            icon: Image.asset(
+              'assets/images/orderhistory.webp', // Android orderhistory
+              width: 22,
+              height: 22,
+              color: const Color(0xFF616161),
+              fit: BoxFit.contain,
+            ),
+            activeIcon: Image.asset(
+              'assets/images/orderhistory.webp',
+              width: 22,
+              height: 22,
+              color: const Color(0xFF007AFF),
+              fit: BoxFit.contain,
+            ),
             label: 'Billing',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.more_horiz_outlined),
-            activeIcon: Icon(Icons.more_horiz),
-            label: 'More',
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.more_horiz, size: 22, color: Color(0xFF616161)),
+            activeIcon: Icon(Icons.more_horiz, size: 22, color: Color(0xFF007AFF)),
+            label: 'More..',
           ),
         ],
       ),

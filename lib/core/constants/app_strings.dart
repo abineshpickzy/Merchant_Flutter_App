@@ -124,14 +124,20 @@ abstract final class AppStrings {
 
   // Navigation Drawer Strings (matching HomeActivity.java)
   static const String drawerStores = 'Stores';
-  static const String drawerWholesale = 'Wholesale Shops';
-  static const String drawerUsersRoles = 'Users & Roles';
-  static const String drawerBillings = 'Billings & Transactions';
-  static const String drawerDelivery = 'Delivery Console';
-  static const String drawerPromotions = 'Promotions & Messages';
-  static const String drawerAbout = 'About BayFay';
-  static const String drawerHelp = 'Help & Support';
+  static const String drawerWholesale = 'Whole Sale Shops';
+  static const String drawerUsers = 'Users';
+  static const String drawerRoles = 'Roles';
+  static const String drawerDelivery = 'Delivery';
+  static const String drawerBillings = 'Billings';
+  static const String drawerGetPaid = 'Get Paid';
+  static const String drawerPromo = 'Promo';
+  static const String drawerHistory = 'History';
+  static const String drawerSettings = 'Settings';
+  static const String drawerAbout = 'About';
+  static const String drawerHelp = 'Help';
   static const String drawerLogout = 'Logout';
+  static const String drawerUsersRoles = 'Users & Roles';
+  static const String drawerPromotions = 'Promo';
 
   // Store Orders Management Strings (matching StoreOrdersActivity & OrdersFragment)
   static const String ordersTitle = 'Store Orders';
@@ -156,7 +162,7 @@ abstract final class AppStrings {
   static const String cancelReasonStoreBusy = 'Store too busy to fulfill';
   static const String cancelReasonCustomerRequest = 'Customer requested cancellation';
   static const String cancelReasonOther = 'Other operational reason';
-  static const String noOrdersInTab = 'No orders in this status';
+  static const String noOrdersInTab = 'No records found!';
   static const String noOrdersInTabSubtitle =
       'Incoming orders for this store will appear here in real-time';
   static const String orderAcceptedSuccess = 'Order accepted successfully!';

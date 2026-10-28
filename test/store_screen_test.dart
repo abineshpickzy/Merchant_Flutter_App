@@ -11,6 +11,7 @@ import 'package:bayfay_merchant_flutter/features/dashboard/view/widgets/store_ca
 import 'package:bayfay_merchant_flutter/features/store/controller/store_controller.dart';
 import 'package:bayfay_merchant_flutter/features/store/model/store_dashboard_metrics_model.dart';
 import 'package:bayfay_merchant_flutter/features/store/view/store_screen.dart';
+import 'package:bayfay_merchant_flutter/features/store/view/widgets/store_tab_app_bar.dart';
 
 void main() {
   late SharedPreferences sharedPreferences;
@@ -192,18 +193,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify AppBar title displays store name
+      // Verify StoreTabAppBar title displays store name
       expect(find.text('Very Long Merchant Supermarket Store Name That Will Be Truncated With Ellipsis'), findsWidgets);
 
-      // Verify Solid Home leading icon button
-      expect(find.byIcon(Icons.home_rounded), findsWidgets);
+      // Verify StoreTabAppBar exists
+      expect(find.byType(StoreTabAppBar), findsWidgets);
 
       // Verify 5 BottomNavigationBar items
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Orders'), findsOneWidget);
       expect(find.text('Inventory'), findsOneWidget);
       expect(find.text('Billing'), findsOneWidget);
-      expect(find.text('More'), findsOneWidget);
+      expect(find.text('More..'), findsOneWidget);
 
       // Verify initial tab (Dashboard) displays exact native 16 pastel cards grid & date filters
       expect(find.text('Today'), findsOneWidget);
@@ -225,21 +226,19 @@ void main() {
       await tester.tap(find.text('Inventory'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Inventory & Catalog Manager'), findsOneWidget);
+      expect(find.textContaining('Catalog for'), findsOneWidget);
 
       // Switch to Tab 3 (Billing)
       await tester.tap(find.text('Billing'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Billing & Transactions'), findsOneWidget);
+      expect(find.textContaining('Billing -'), findsOneWidget);
 
-      // Switch to Tab 4 (More)
-      await tester.tap(find.text('More'));
+      // Switch to Tab 4 (More..)
+      await tester.tap(find.text('More..'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Store Management'), findsOneWidget);
-      expect(find.text('Notification Preferences'), findsOneWidget);
-      expect(find.text('Security & Password'), findsOneWidget);
+      expect(find.textContaining('Settings -'), findsOneWidget);
     });
 
     testWidgets('Tapping leading Home icon on AppBar returns to root route directly', (tester) async {
@@ -266,8 +265,12 @@ void main() {
 
       expect(find.byType(StoreScreen), findsOneWidget);
 
-      // Tap Leading Home button
-      await tester.tap(find.byIcon(Icons.home_rounded).first);
+      // Tap Leading Home button on StoreTabAppBar
+      final homeBtn = find.descendant(
+        of: find.byType(StoreTabAppBar).first,
+        matching: find.byType(InkWell),
+      ).first;
+      await tester.tap(homeBtn);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));

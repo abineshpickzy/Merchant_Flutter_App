@@ -113,16 +113,24 @@ class HomeDrawer extends ConsumerWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.manage_accounts_outlined, color: AppColors.textPrimary),
-                  title: const Text(AppStrings.drawerUsersRoles),
+                  leading: const Icon(Icons.people_outline, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerUsers),
                   onTap: () {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(AppStrings.adminUsersRolesManagement),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.manage_accounts_outlined, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerRoles),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.local_shipping_outlined, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerDelivery),
+                  onTap: () {
+                    Navigator.of(context).pop();
                   },
                 ),
                 ListTile(
@@ -130,38 +138,34 @@ class HomeDrawer extends ConsumerWidget {
                   title: const Text(AppStrings.drawerBillings),
                   onTap: () {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(AppStrings.billingsTransactionsConsole),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delivery_dining_outlined, color: AppColors.textPrimary),
-                  title: const Text(AppStrings.drawerDelivery),
+                  leading: const Icon(Icons.payments_outlined, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerGetPaid),
                   onTap: () {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(AppStrings.deliveryAssociateConsole),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.campaign_outlined, color: AppColors.textPrimary),
-                  title: const Text(AppStrings.drawerPromotions),
+                  title: const Text(AppStrings.drawerPromo),
                   onTap: () {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(AppStrings.promotionsMarketing),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history_rounded, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerHistory),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
+                  title: const Text(AppStrings.drawerSettings),
+                  onTap: () {
+                    Navigator.of(context).pop();
                   },
                 ),
                 const Divider(),

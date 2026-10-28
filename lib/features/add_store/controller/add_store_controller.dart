@@ -136,11 +136,9 @@ class AddStoreState {
     this.categoryDescription = '',
     this.contactTime = '',
     this.primaryNumber,
-    // TODO: RE-ENABLE VALIDATION
     this.isPrimaryVerified = false,
     this.secondaryType = 'mobile',
     this.secondaryNumber,
-    // TODO: RE-ENABLE VALIDATION
     this.isSecondaryVerified = false,
     this.secCodeText = '+91',
     this.images = const [],
