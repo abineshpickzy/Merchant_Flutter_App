@@ -274,47 +274,60 @@ class _HomeBodyViewState extends ConsumerState<HomeBodyView> {
 
             if (storeList.isEmpty) return const SizedBox.shrink();
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 4.0,
-                    top: 12.0,
-                    bottom: 8.0,
-                  ),
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2B2B2B),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 4.0,
+                        top: 12.0,
+                        bottom: 8.0,
+                      ),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2B2B2B),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.65,
-                    crossAxisSpacing: 6,
-                    mainAxisSpacing: 6,
-                  ),
-                  itemCount: storeList.length,
-                  itemBuilder: (context, index) {
-                    final store = storeList[index];
-                    return StoreCard(
-                      store: store,
-                      onTap: () =>
-                          StoreCard.handleStoreTap(context, ref, store),
-                    );
-                  },
-                ),
-              ],
-            );
-          }).toList(),
+                    Column(
+                      children: [
+                        for (var i = 0; i < storeList.length; i += 3)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (var j = i; j < i + 3; j++) ...[
+                                    if (j > i) const SizedBox(width: 6),
+                                    Expanded(
+                                      child:
+                                          j < storeList.length
+                                              ? StoreCard(
+                                                store: storeList[j],
+                                                onTap:
+                                                    () =>
+                                                        StoreCard.handleStoreTap(
+                                                          context,
+                                                          ref,
+                                                          storeList[j],
+                                                        ),
+                                              )
+                                              : const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              }).toList(),
         );
       },
       loading: () => const StoresSectionSkeletonLoader(),

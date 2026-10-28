@@ -21,8 +21,9 @@ import 'widgets/setting_section_header.dart';
 import 'widgets/settings_bottom_bar.dart';
 import 'widgets/settings_skeleton_loader.dart';
 
-/// Tab 5: Store Settings View matching Android SettingsFragment.java & shop_setting_fragment.xml 1:1
-class StoreSettingsTabView extends ConsumerStatefulWidget {
+/// Tab 5: Store Settings View hosting a local Navigator so all subpages remain wrapped
+/// INSIDE Tab 5 with the persistent 5-tab bottom navigation bar always visible (matching Android).
+class StoreSettingsTabView extends StatelessWidget {
   final StoreModel store;
 
   const StoreSettingsTabView({
@@ -31,10 +32,31 @@ class StoreSettingsTabView extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<StoreSettingsTabView> createState() => _StoreSettingsTabViewState();
+  Widget build(BuildContext context) {
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (nestedContext) => StoreSettingsMenuContent(store: store),
+        );
+      },
+    );
+  }
 }
 
-class _StoreSettingsTabViewState extends ConsumerState<StoreSettingsTabView> {
+/// Main Settings menu content inside Tab 5
+class StoreSettingsMenuContent extends ConsumerStatefulWidget {
+  final StoreModel store;
+
+  const StoreSettingsMenuContent({
+    super.key,
+    required this.store,
+  });
+
+  @override
+  ConsumerState<StoreSettingsMenuContent> createState() => _StoreSettingsMenuContentState();
+}
+
+class _StoreSettingsMenuContentState extends ConsumerState<StoreSettingsMenuContent> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingControllerProvider(widget.store));
@@ -262,7 +284,6 @@ class _StoreSettingsTabViewState extends ConsumerState<StoreSettingsTabView> {
     final controller = ref.read(settingControllerProvider(widget.store).notifier);
 
     if (storeStatus == 1) {
-      // Payment check required
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -277,7 +298,6 @@ class _StoreSettingsTabViewState extends ConsumerState<StoreSettingsTabView> {
         ),
       );
     } else if (storeStatus == 2) {
-      // Review required
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -292,7 +312,6 @@ class _StoreSettingsTabViewState extends ConsumerState<StoreSettingsTabView> {
         ),
       );
     } else {
-      // Normal confirmation
       final message = b ? 'Do you want to open the shop?' : 'Do you want to close the shop?';
       showDialog(
         context: context,

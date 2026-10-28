@@ -88,6 +88,9 @@ abstract final class ApiEndpoints {
   static const String orderMsgTemplate = 'order/msgTemplate';
   static const String orderSendMessage = 'order/message';
   static const String orderInvoiceSent = 'order/invoice/sent';
+  static const String orderHistory = 'order/history';
+  static const String orderEscalateMessagesCurrent = 'order/escalate/messages/current';
+  static const String orderEscalateMessagesProducts = 'order/escalate/messages/viewProducts';
   static String orderNotesDownloadUrl(String filename) =>
       '${baseUrl}order/notes/download?file=$filename';
 
@@ -119,9 +122,19 @@ abstract final class ApiEndpoints {
 
   // Settings Endpoints (matching ApiService.java callSetting, callSettingUpdate, detachShop)
   static const String shopViewBasic = 'shop/view/basic';
+  static const String shopViewAdvanced = 'shop/view/advanced';
+  static const String shopViewDelivery = 'shop/view/delivery';
+  static const String shopViewPrivate = 'shop/view/private';
+  static const String shopAddSettings = 'shop/addSettings';
+  static const String shopViewLicence = 'shop/view/licence';
+  static const String shopLicenceSettings = 'shop/licence/settings';
+  static const String shopViewShopInfo = 'shop/view/shopInfo';
+  static const String shopShopInfo = 'shop/shopInfo';
   static const String shopEdit = 'shop/edit';
   static const String shopRemove = 'shop/remove';
   static const String shopPaymentInfo = 'merchant/payment/info';
+  static const String merchantOtpSend = 'merchant/onetimepassword/send';
+  static const String merchantOtpVerify = 'merchant/onetimepassword/verify';
 
   // Notifications
   static const String notifications = 'notifications';

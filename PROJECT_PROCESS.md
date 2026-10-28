@@ -3681,3 +3681,104 @@ awData is List\ and safely extract the first associate object.
   - `flutter analyze`: **0 issues found (100% clean)**.
   - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
 
+
+---
+
+## Phase 139 - Settings Sub-Pages Batch 1: OrderHistoryView & StoreMessagesView with Nested Tab Navigation
+**Date**: October 28, 2026
+- **Architecture & Navigation Parity**:
+  1. **Nested Local Tab Navigation Shell**:
+     - Verified in Android (`SettingsFragment.java` lines 341-347) that `ft.replace(R.id.parentSetting1, fragment)` loads all sub-screens inside the Settings Tab itself, keeping the 5-tab persistent bottom navigation bar visible at all times.
+     - Implemented `StoreSettingsTabView` with a local nested `Navigator`, enabling seamless in-tab push/pop navigation without obscuring the bottom navigation bar.
+  2. **OrderHistoryView MVC Architecture ([`subpages/order_history/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/))**:
+     - **Model** ([`order_history_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/model/order_history_model.dart)): Complete schema mapping Android `OrderAllStoreResponse.Order`, status mappings with hex colors, and reactive `OrderHistoryState`.
+     - **Repository** ([`order_history_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/repository/order_history_repository.dart)): Calls `GET order/history?shop_id=&from=&to=&skip=&limit=`.
+     - **Controller** ([`order_history_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/controller/order_history_controller.dart)): Manages segmented quick filters (`Today`, `Last 7 Days`, `Last 30 Days`), custom `From`/`To` date ranges, and lazy scroll pagination.
+     - **Widgets & View**:
+       - [`OrderHistoryFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_filter_header.dart): 35dp segmented tabs with `#2196F3` active state + calendar date pickers and `Go` button.
+       - [`OrderHistoryCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_card.dart): Matching `adapter_delivery.xml` with customer avatar, name, Order ID with shop type badge, distance, amount, payment mode, status, and details chevron.
+       - [`OrderHistorySkeleton`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_skeleton.dart): Multi-card shimmer loading state.
+       - [`OrderHistoryView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/order_history_view.dart): Hosts `StoreTabAppBar` with back button, pull-to-refresh, empty state `"No records found!"`, and order details bottom sheet.
+  3. **StoreMessagesView MVC Architecture ([`subpages/messages/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/))**:
+     - **Model** ([`store_messages_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/model/store_messages_model.dart)): Chat thread item and reactive `StoreMessagesState`.
+     - **Repository** ([`store_messages_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/repository/store_messages_repository.dart)): Calls `POST order/escalate/messages/current`.
+     - **Controller** ([`store_messages_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/controller/store_messages_controller.dart)): Manages messages fetching and pull-to-refresh.
+     - **Widgets & View**:
+       - [`MessageThreadCard`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/view/widgets/message_thread_card.dart): Matching `list_parent_order.xml` with customer initial avatar, customer name, order ID, unread badge, and last message preview.
+       - [`MessagesSkeleton`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/view/widgets/messages_skeleton.dart): Shimmer loading cards.
+       - [`StoreMessagesView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/messages/view/store_messages_view.dart): Hosts `StoreTabAppBar` with back button, pull-to-refresh, empty state, and chat preview sheet.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+
+
+## Phase 140: Store Settings Batch 2 - StoreDetailsSettingView & StoreDeliverySettingView MVC Implementation
+- **Date**: 2026-10-28
+- **Scope**: Implemented Batch 2 sub-pages of the Store Settings Tab (`StoreDetailsSettingView` and `StoreDeliverySettingView`) with 1:1 visual and functional parity to Android app (`StoreDetailsSettingFragment.java`, `settings_store_details.xml`, `StoreDetailsLocationSettingFragment.java`, and `settings_store_delivery_config.xml`).
+- **Architectural Implementation**:
+  1. **Endpoints Registered ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - `shopViewAdvanced = 'shop/view/advanced'`
+     - `shopViewDelivery = 'shop/view/delivery'`
+     - `merchantOtpSend = 'merchant/onetimepassword/send'`
+     - `merchantOtpVerify = 'merchant/onetimepassword/verify'`
+  2. **StoreDetailsSettingView MVC Architecture ([`subpages/store_details/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/))**:
+     - **Model** ([`store_details_setting_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/model/store_details_setting_model.dart)): Complete schema for `SettingLocationData`, `LocationItem`, `SecondaryNumberType`, and reactive `StoreDetailsSettingState`.
+     - **Repository** ([`store_details_setting_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/repository/store_details_setting_repository.dart)):
+       - `POST shop/view/advanced`: Fetch full store location and contact data.
+       - `GET merchant/location`: Fetch countries.
+       - `GET merchant/location?country=`: Fetch states and cities for country.
+       - `POST merchant/onetimepassword/send`: Send SMS OTP for phone verification.
+       - `POST merchant/onetimepassword/verify`: Verify 6-digit SMS OTP.
+       - `POST shop/edit`: Update store display name, primary mobile, secondary mobile / landline.
+     - **Controller** ([`store_details_setting_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/controller/store_details_setting_controller.dart)): StateNotifier managing input fields, primary/secondary mobile phone verification (with auto-verify matching registered profile phone per Android parity), OTP send/verify flows, and save.
+     - **Widgets & View**:
+       - [`StoreDetailsOtpDialog`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/view/widgets/store_details_otp_dialog.dart): 1:1 modal matching `alert_otp.xml` with shield icon, 6-digit OTP input, resend button, and Cancel/Submit buttons.
+       - [`StoreDetailsSettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/view/store_details_setting_view.dart): Scrollable form matching `settings_store_details.xml`, top AppBar with Save button, Material horizontal progress indicator, store name, primary mobile + OTP verification, secondary mobile/landline selector, store address with GPS button, disabled Country/State/City selectors, and pincode.
+  3. **StoreDeliverySettingView MVC Architecture ([`subpages/delivery_settings/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/))**:
+     - **Model** ([`delivery_setting_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/model/delivery_setting_model.dart)): Complete schema for `DeliveryConfigData`, `DeliverySettingOption`, and reactive `StoreDeliverySettingState`.
+     - **Repository** ([`delivery_setting_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/repository/delivery_setting_repository.dart)):
+       - `POST shop/view/delivery`: Fetch delivery configuration and settings.
+       - `POST shop/edit`: Save updated delivery configurations.
+     - **Controller** ([`delivery_setting_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/controller/delivery_setting_controller.dart)): StateNotifier managing replacement & refund days, radius, time pickers, delivery types (Shop, Agency, Self pickup), delivery charges, min order limit, delivery per km, COD & online payment toggles with mutual exclusion validation, 7-day store availability, and shipping to other locations.
+     - **View** ([`store_delivery_setting_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/view/store_delivery_setting_view.dart)): Form matching `settings_store_delivery_config.xml` with top AppBar Save button, linear progress bar, green divider section chips (`Nearby Location`, `Ship To Other Locations`), time pickers, and all delivery config inputs.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+
+
+## Phase 141: Store Settings Batch 3 - AdditionalSettings, LicenceDetails, ShopInfo, ConfigureShopUi MVC Implementation & StoreTabAppBar Standardization
+- **Date**: 2026-10-28
+- **Scope**: Implemented Batch 3 sub-pages of the Store Settings Tab (`AdditionalSettingsView`, `LicenceDetailsView`, `ShopInfoView`, and `ConfigureShopUiView`) with 1:1 visual and functional parity to Android app (`AdditionalSettingsFragment.java`, `LicenceDetailsFragment.java`, `ShopInfoFragment.java`, and `SettingConfigureUiFragment.java`), maintaining full MVC directory structures and standardized [`StoreTabAppBar`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/widgets/store_tab_app_bar.dart) usage across all sub-screens inside tabs.
+- **Architectural Implementation**:
+  1. **Endpoints Registered ([`api_endpoints.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/network/api_endpoints.dart))**:
+     - `shopViewPrivate = 'shop/view/private'`
+     - `shopAddSettings = 'shop/addSettings'`
+     - `shopViewLicence = 'shop/view/licence'`
+     - `shopLicenceSettings = 'shop/licence/settings'`
+     - `shopViewShopInfo = 'shop/view/shopInfo'`
+     - `shopShopInfo = 'shop/shopInfo'`
+  2. **AdditionalSettingsView MVC Architecture ([`subpages/additional_settings/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/))**:
+     - **Model** ([`additional_settings_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/model/additional_settings_model.dart)): `ShopTimingSlot` schema and `AdditionalSettingsState`.
+     - **Repository** ([`additional_settings_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/repository/additional_settings_repository.dart)): Calls `POST shop/view/delivery` and `POST shop/addSettings`.
+     - **Controller** ([`additional_settings_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/controller/additional_settings_controller.dart)): Manages packaging pricing types (`Price INR` / `% Percentage`), package price, min order limit with tooltip info, agency responsibility toggle with dialog, automatic shop open/close switch, and dynamic time slot management.
+     - **View** ([`additional_settings_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/view/additional_settings_view.dart)): Matching `additional_settings_layout.xml` with `StoreTabAppBar`, Save button, and responsive time slot controls.
+  3. **LicenceDetailsView MVC Architecture ([`subpages/licence_details/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/))**:
+     - **Model** ([`licence_details_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/model/licence_details_model.dart)): `LicenceDetailsData` and `LicenceDetailsState`.
+     - **Repository** ([`licence_details_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/repository/licence_details_repository.dart)): Calls `POST shop/view/licence` and `POST shop/licence/settings`.
+     - **Controller** ([`licence_details_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/controller/licence_details_controller.dart)): Strict validation for GSTIN (15 chars), PAN (10 chars), FSSAI (14 digits), and auto-invoice toggle.
+     - **View** ([`licence_details_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/view/licence_details_view.dart)): Form matching `licence_detail_layout.xml` with `StoreTabAppBar` and Save button.
+  4. **ShopInfoView MVC Architecture ([`subpages/shop_info/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/))**:
+     - **Model** ([`shop_info_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/model/shop_info_model.dart)): `ShopInfoData` and `ShopInfoState`.
+     - **Repository** ([`shop_info_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/repository/shop_info_repository.dart)): Calls `POST shop/view/shopInfo` and `POST shop/shopInfo`.
+     - **Controller** ([`shop_info_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/controller/shop_info_controller.dart)): Manages shop photos list, certificate images list, multiline description cards, and video URL links.
+     - **View** ([`shop_info_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/view/shop_info_view.dart)): Matching `shop_info_fragment.xml` with `StoreTabAppBar`, horizontal media lists, and description/link manager.
+  5. **ConfigureShopUiView MVC Architecture ([`subpages/configure_shop_ui/`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/))**:
+     - **Model** ([`configure_shop_ui_model.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/model/configure_shop_ui_model.dart)): `ShopFrameType` and `ConfigureShopUiState`.
+     - **Repository** ([`configure_shop_ui_repository.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/repository/configure_shop_ui_repository.dart)): Calls `POST shop/view/private` and `POST shop/edit`.
+     - **Controller** ([`configure_shop_ui_controller.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/controller/configure_shop_ui_controller.dart)): Fetches frame options and updates selected frame id.
+     - **View** ([`configure_shop_ui_view.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/view/configure_shop_ui_view.dart)): Matching `fragment_setting_configure_ui.xml` with `StoreTabAppBar`, frame dropdown selector, and storefront presentation preview card.
+  6. **Standardization of `StoreTabAppBar` across all sub-screens**:
+     - Updated [`StoreDetailsSettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/view/store_details_setting_view.dart) and [`StoreDeliverySettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/view/store_delivery_setting_view.dart) to standardize on [`StoreTabAppBar`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/widgets/store_tab_app_bar.dart) with back button leading and top-right Save action button.
+- **Verification Results**:
+  - `flutter analyze`: **0 issues found (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
