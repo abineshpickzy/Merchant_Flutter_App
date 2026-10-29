@@ -32,6 +32,8 @@ class ConfigureShopUiController extends StateNotifier<ConfigureShopUiState> {
       categoryId: _store.categoryId,
     );
 
+    if (!mounted) return;
+
     if (res == null) {
       state = state.copyWith(
         isLoading: false,
@@ -62,6 +64,7 @@ class ConfigureShopUiController extends StateNotifier<ConfigureShopUiState> {
       frameId: state.selectedFrameId,
     );
 
+    if (!mounted) return (success: false, message: '');
     state = state.copyWith(isSaving: false);
 
     if (res.success) {

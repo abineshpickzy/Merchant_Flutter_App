@@ -51,6 +51,7 @@ class LocationServiceNotifier extends StateNotifier<LocationServiceState> {
   Future<bool> checkServiceStatus() async {
     try {
       final isEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return isEnabled;
       if (isEnabled) {
         // Reset declined state once GPS is enabled
         _userDeclinedThisSession = false;
@@ -72,6 +73,7 @@ class LocationServiceNotifier extends StateNotifier<LocationServiceState> {
 
     try {
       final isEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return isEnabled;
       if (isEnabled) {
         _userDeclinedThisSession = false;
         state = state.copyWith(isGpsEnabled: true, isChecking: false);
@@ -87,6 +89,7 @@ class LocationServiceNotifier extends StateNotifier<LocationServiceState> {
       // Check location permission status without re-prompting OS dialogs on subsequent launches
       final hasPermission = await Permission.location.isGranted ||
           await Permission.locationWhenInUse.isGranted;
+      if (!mounted) return false;
       if (!hasPermission) {
         state = state.copyWith(isGpsEnabled: false, isChecking: false);
         return false;
@@ -105,6 +108,7 @@ class LocationServiceNotifier extends StateNotifier<LocationServiceState> {
       );
 
       final nowEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return nowEnabled;
       if (nowEnabled) {
         _userDeclinedThisSession = false;
       }
@@ -117,11 +121,14 @@ class LocationServiceNotifier extends StateNotifier<LocationServiceState> {
     } on LocationServiceDisabledException {
       // User dismissed the native dialog or tapped "No, thanks"
       _userDeclinedThisSession = true;
-      state = state.copyWith(isGpsEnabled: false, isChecking: false);
+      if (mounted) {
+        state = state.copyWith(isGpsEnabled: false, isChecking: false);
+      }
       return false;
     } catch (e) {
       final nowEnabled =
           await Geolocator.isLocationServiceEnabled().catchError((_) => false);
+      if (!mounted) return nowEnabled;
       if (nowEnabled) {
         _userDeclinedThisSession = false;
       }

@@ -28,6 +28,8 @@ class SettingController extends StateNotifier<SettingState> {
         categoryId: categoryId,
       );
 
+      if (!mounted) return;
+
       if (data != null) {
         state = state.copyWith(isLoading: false, data: data);
       } else {
@@ -45,6 +47,7 @@ class SettingController extends StateNotifier<SettingState> {
         state = state.copyWith(isLoading: false, data: fallback);
       }
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to load settings: $e',
@@ -72,6 +75,7 @@ class SettingController extends StateNotifier<SettingState> {
       ),
     );
 
+    if (!mounted) return false;
     state = state.copyWith(isUpdating: false);
 
     if (result.success) {
@@ -104,6 +108,7 @@ class SettingController extends StateNotifier<SettingState> {
       ),
     );
 
+    if (!mounted) return false;
     state = state.copyWith(isUpdating: false);
 
     if (result.success) {
@@ -137,6 +142,7 @@ class SettingController extends StateNotifier<SettingState> {
       ),
     );
 
+    if (!mounted) return false;
     state = state.copyWith(isUpdating: false);
 
     if (result.success) {
@@ -154,6 +160,7 @@ class SettingController extends StateNotifier<SettingState> {
   Future<({bool success, String message})> detachShop() async {
     state = state.copyWith(isUpdating: true);
     final result = await _repository.detachShop(shopId: store.id);
+    if (!mounted) return result;
     state = state.copyWith(isUpdating: false);
     return result;
   }

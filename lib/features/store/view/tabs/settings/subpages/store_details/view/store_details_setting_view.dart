@@ -5,6 +5,7 @@ import 'package:bayfay_merchant_flutter/features/store/view/widgets/store_tab_ap
 import '../controller/store_details_setting_controller.dart';
 import '../model/store_details_setting_model.dart';
 import 'widgets/store_details_otp_dialog.dart';
+import 'widgets/store_location_pin_icon.dart';
 
 class StoreDetailsSettingView extends ConsumerStatefulWidget {
   final StoreModel store;
@@ -189,7 +190,7 @@ class _StoreDetailsSettingViewState
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                     child: state.isSaving
@@ -216,7 +217,7 @@ class _StoreDetailsSettingViewState
       ),
       body: Column(
         children: [
-          // Divider
+          // Nav underline matching Android
           const Divider(height: 1, thickness: 1, color: Color(0xFFE3E3E3)),
 
           // Horizontal Progress Bar matching Android MaterialProgressBar
@@ -230,34 +231,42 @@ class _StoreDetailsSettingViewState
           // Scrollable Form matching settings_store_details.xml
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Store Name
+                  // 1. Store Name - STRICTLY NON-EDITABLE MANUALLY (android:focusable="false")
                   _buildFieldLabel('Store Name'),
                   const SizedBox(height: 4),
                   TextField(
                     controller: _nameController,
-                    onChanged: controller.onStoreNameChanged,
-                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    readOnly: true,
+                    canRequestFocus: false,
+                    enableInteractiveSelection: false,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF333333),
+                      fontWeight: FontWeight.w500,
+                    ),
                     decoration: _inputDecoration(
                       hintText: 'Enter store/business name',
+                      isReadOnly: true,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // 2. Primary Mobile Number
+                  // 2. Primary Mobile Number (Editable + Verify)
                   _buildFieldLabel('Primary Mobile Number *'),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
                         child: Container(
-                          height: 40,
+                          height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
+                            color: const Color(0xFFF7F7F7),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
@@ -272,19 +281,17 @@ class _StoreDetailsSettingViewState
                                   ),
                                 ),
                               ),
-                              VerticalDivider(
-                                width: 1,
-                                thickness: 1,
-                                color: Colors.grey.shade300,
+                              Container(
+                                width: 0.5,
+                                height: 24,
+                                color: const Color(0xFFE0E0E0),
                               ),
                               Expanded(
                                 child: TextField(
                                   controller: _primaryMobileController,
                                   keyboardType: TextInputType.phone,
                                   maxLength: 10,
-                                  onChanged: (val) {
-                                    controller.onPrimaryMobileChanged(val);
-                                  },
+                                  onChanged: controller.onPrimaryMobileChanged,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.black87,
@@ -294,11 +301,11 @@ class _StoreDetailsSettingViewState
                                     hintText: 'Enter mobile number',
                                     hintStyle: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey,
+                                      color: Color(0xFF9E9E9E),
                                     ),
                                     border: InputBorder.none,
                                     contentPadding:
-                                        EdgeInsets.symmetric(horizontal: 10),
+                                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   ),
                                 ),
                               ),
@@ -308,11 +315,11 @@ class _StoreDetailsSettingViewState
                       ),
                       const SizedBox(width: 8),
 
-                      // Verify button or Verified checkmark
+                      // Verify button or Verified checkmark matching Android edt_card_single_blue_bg
                       if (state.isPrimaryVerified)
                         Container(
                           width: 80,
-                          height: 40,
+                          height: 38,
                           alignment: Alignment.center,
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -320,14 +327,14 @@ class _StoreDetailsSettingViewState
                               Icon(
                                 Icons.check_circle,
                                 color: Color(0xFF4CAF50),
-                                size: 20,
+                                size: 18,
                               ),
                               SizedBox(width: 4),
                               Text(
                                 'Verified',
                                 style: TextStyle(
                                   color: Color(0xFF4CAF50),
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -337,15 +344,18 @@ class _StoreDetailsSettingViewState
                       else
                         SizedBox(
                           width: 80,
-                          height: 40,
+                          height: 38,
                           child: OutlinedButton(
                             onPressed: isBusy
                                 ? null
                                 : () => _handleVerifyPrimary(controller),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF2196F3)),
+                              side: const BorderSide(
+                                color: Color(0xFF2196F3),
+                                width: 1,
+                              ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               padding: EdgeInsets.zero,
                             ),
@@ -361,17 +371,18 @@ class _StoreDetailsSettingViewState
                         ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 3. Secondary Number (Optional)
                   _buildFieldLabel('Secondary Number (Optional)'),
                   const SizedBox(height: 4),
                   Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(6),
+                      color: const Color(0xFFF7F7F7),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<SecondaryNumberType>(
@@ -399,7 +410,7 @@ class _StoreDetailsSettingViewState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // Secondary input based on type
                   if (state.secondaryType == SecondaryNumberType.mobile)
@@ -407,10 +418,11 @@ class _StoreDetailsSettingViewState
                       children: [
                         Expanded(
                           child: Container(
-                            height: 40,
+                            height: 38,
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFFF7F7F7),
+                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
                               children: [
@@ -426,19 +438,17 @@ class _StoreDetailsSettingViewState
                                     ),
                                   ),
                                 ),
-                                VerticalDivider(
-                                  width: 1,
-                                  thickness: 1,
-                                  color: Colors.grey.shade300,
+                                Container(
+                                  width: 0.5,
+                                  height: 24,
+                                  color: const Color(0xFFE0E0E0),
                                 ),
                                 Expanded(
                                   child: TextField(
                                     controller: _secMobileController,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
-                                    onChanged: (val) {
-                                      controller.onSecondaryMobileChanged(val);
-                                    },
+                                    onChanged: controller.onSecondaryMobileChanged,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.black87,
@@ -448,11 +458,11 @@ class _StoreDetailsSettingViewState
                                       hintText: 'Enter secondary number',
                                       hintStyle: TextStyle(
                                         fontSize: 13,
-                                        color: Colors.grey,
+                                        color: Color(0xFF9E9E9E),
                                       ),
                                       border: InputBorder.none,
                                       contentPadding:
-                                          EdgeInsets.symmetric(horizontal: 10),
+                                          EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                     ),
                                   ),
                                 ),
@@ -464,7 +474,7 @@ class _StoreDetailsSettingViewState
                         if (state.isSecondaryVerified)
                           Container(
                             width: 80,
-                            height: 40,
+                            height: 38,
                             alignment: Alignment.center,
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -472,14 +482,14 @@ class _StoreDetailsSettingViewState
                                 Icon(
                                   Icons.check_circle,
                                   color: Color(0xFF4CAF50),
-                                  size: 20,
+                                  size: 18,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
                                   'Verified',
                                   style: TextStyle(
                                     color: Color(0xFF4CAF50),
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -489,16 +499,18 @@ class _StoreDetailsSettingViewState
                         else
                           SizedBox(
                             width: 80,
-                            height: 40,
+                            height: 38,
                             child: OutlinedButton(
                               onPressed: isBusy
                                   ? null
                                   : () => _handleVerifySecondary(controller),
                               style: OutlinedButton.styleFrom(
-                                side:
-                                    const BorderSide(color: Color(0xFF2196F3)),
+                                side: const BorderSide(
+                                  color: Color(0xFF2196F3),
+                                  width: 1,
+                                ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 padding: EdgeInsets.zero,
                               ),
@@ -519,7 +531,7 @@ class _StoreDetailsSettingViewState
                       children: [
                         SizedBox(
                           width: 80,
-                          height: 40,
+                          height: 38,
                           child: TextField(
                             controller: _secStdController,
                             keyboardType: TextInputType.number,
@@ -529,13 +541,16 @@ class _StoreDetailsSettingViewState
                               fontSize: 13,
                               color: Colors.black87,
                             ),
-                            decoration: _inputDecoration(hintText: 'STD Code'),
+                            decoration: _inputDecoration(
+                              hintText: 'STD Code',
+                              isReadOnly: false,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: SizedBox(
-                            height: 40,
+                            height: 38,
                             child: TextField(
                               controller: _secLandlineController,
                               keyboardType: TextInputType.phone,
@@ -548,171 +563,119 @@ class _StoreDetailsSettingViewState
                               ),
                               decoration: _inputDecoration(
                                 hintText: 'Enter landline number',
+                                isReadOnly: false,
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // 4. Store Address
+                  // 4. Store Address - STRICTLY NON-EDITABLE MANUALLY (android:focusable="false")
+                  // Auto fetch only triggered when user taps the location pin button!
                   _buildFieldLabel('Store Address *'),
                   const SizedBox(height: 4),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _addressController,
-                          maxLines: 3,
-                          onChanged: controller.onStreetAddressChanged,
+                          maxLines: 4,
+                          readOnly: true,
+                          canRequestFocus: false,
+                          enableInteractiveSelection: false,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: Colors.black87,
+                            color: Color(0xFF333333),
+                            fontWeight: FontWeight.w400,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Select store location or enter address',
+                            filled: true,
+                            fillColor: const Color(0xFFF7F7F7),
+                            hintText: 'Select store location',
                             hintStyle: const TextStyle(
                               fontSize: 13,
-                              color: Colors.grey,
+                              color: Color(0xFF9E9E9E),
                             ),
-                            contentPadding: const EdgeInsets.all(10),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                                width: 0.5,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide:
-                                  BorderSide(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                                width: 0.5,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(4),
                               borderSide: const BorderSide(
-                                color: Color(0xFF2196F3),
-                                width: 1.5,
+                                color: Color(0xFFE0E0E0),
+                                width: 0.5,
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.my_location,
-                            color: Color(0xFF2196F3),
-                            size: 22,
-                          ),
-                          tooltip: 'Current Location',
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Location fetched successfully'),
-                              ),
-                            );
-                          },
-                        ),
+                      const SizedBox(width: 10),
+                      // Location Pin icon matching Android ic_location_current_m (static icon)
+                      Image.asset(
+                        'assets/images/location_pin.png',
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.contain,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // 5. Country (Disabled)
+                  // 5. Country (Disabled/Read-only in Android)
                   _buildFieldLabel('Country *'),
                   const SizedBox(height: 4),
-                  Container(
-                    height: 40,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.centerLeft,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      state.country ?? 'India',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                  _buildDisabledSpinner(state.country ?? 'India'),
+                  const SizedBox(height: 12),
 
-                  // 6. State (Disabled)
+                  // 6. State (Disabled/Read-only in Android)
                   _buildFieldLabel('State *'),
                   const SizedBox(height: 4),
-                  Container(
-                    height: 40,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.centerLeft,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      state.state ?? 'Select State',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: state.state != null
-                            ? Colors.black87
-                            : Colors.grey.shade500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                  _buildDisabledSpinner(state.state ?? 'Select State'),
+                  const SizedBox(height: 12),
 
-                  // 7. City (Disabled)
+                  // 7. City (Disabled/Read-only in Android)
                   _buildFieldLabel('City *'),
                   const SizedBox(height: 4),
-                  Container(
-                    height: 40,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.centerLeft,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      state.city ?? 'Select City',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: state.city != null
-                            ? Colors.black87
-                            : Colors.grey.shade500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                  _buildDisabledSpinner(state.city ?? 'Select City'),
+                  const SizedBox(height: 12),
 
-                  // 8. Pincode
+                  // 8. Pincode - STRICTLY NON-EDITABLE MANUALLY (android:focusable="false")
                   _buildFieldLabel('Pincode *'),
                   const SizedBox(height: 4),
                   SizedBox(
-                    height: 40,
+                    height: 38,
                     child: TextField(
                       controller: _pincodeController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      onChanged: controller.onPincodeChanged,
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black87),
-                      decoration: _inputDecoration(hintText: 'Pincode'),
+                      readOnly: true,
+                      canRequestFocus: false,
+                      enableInteractiveSelection: false,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF333333),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: _inputDecoration(
+                        hintText: 'Pincode',
+                        isReadOnly: true,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -730,29 +693,71 @@ class _StoreDetailsSettingViewState
       label,
       style: const TextStyle(
         fontSize: 13,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         color: Color(0xFF333333),
       ),
     );
   }
 
-  InputDecoration _inputDecoration({required String hintText}) {
+  Widget _buildDisabledSpinner(String text) {
+    return Container(
+      height: 38,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 0.5),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF333333),
+                fontWeight: FontWeight.w400,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Icon(
+            Icons.arrow_drop_down,
+            color: Color(0xFF9E9E9E),
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hintText,
+    required bool isReadOnly,
+  }) {
     return InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFFF7F7F7),
       counterText: '',
       hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: BorderSide(
+          color: isReadOnly ? const Color(0xFFE0E0E0) : const Color(0xFF2196F3),
+          width: isReadOnly ? 0.5 : 1.2,
+        ),
       ),
     );
   }

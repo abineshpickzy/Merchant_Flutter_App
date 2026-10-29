@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:bayfay_merchant_flutter/features/dashboard/model/store_model.dart';
 import 'package:bayfay_merchant_flutter/features/store/view/widgets/store_tab_app_bar.dart';
 import '../controller/delivery_setting_controller.dart';
@@ -23,16 +24,6 @@ class _StoreDeliverySettingViewState
   late TextEditingController _codLimitController;
   late TextEditingController _otherFeeController;
   late TextEditingController _otherLimitController;
-
-  static const List<DeliverySettingOption> _daysOptions = [
-    DeliverySettingOption(days: 7, label: '7 Days'),
-    DeliverySettingOption(days: 14, label: '14 Days'),
-    DeliverySettingOption(days: 21, label: '21 Days'),
-    DeliverySettingOption(days: 30, label: '1 Month'),
-    DeliverySettingOption(days: 90, label: '3 Month'),
-    DeliverySettingOption(days: 180, label: '6 Month'),
-    DeliverySettingOption(days: 365, label: '1 Year'),
-  ];
 
   @override
   void initState() {
@@ -79,25 +70,68 @@ class _StoreDeliverySettingViewState
     }
   }
 
+  String _formatTo12Hour(String time) {
+    final clean = time.trim();
+    if (clean.isEmpty) return '00:00';
+    final upper = clean.toUpperCase();
+    if (upper.contains('AM') || upper.contains('PM')) return clean;
+
+    try {
+      if (clean.contains('T')) {
+        final dt = DateTime.parse(clean).toLocal();
+        return DateFormat('hh:mm a').format(dt);
+      }
+    } catch (_) {}
+
+    try {
+      final parts = clean.split(':');
+      if (parts.isNotEmpty) {
+        final hour = int.parse(parts[0]);
+        final minute = parts.length > 1 ? int.parse(parts[1].split('.')[0]) : 0;
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final h12 = hour % 12 == 0 ? 12 : hour % 12;
+        return '${h12.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+      }
+    } catch (_) {}
+
+    return clean;
+  }
+
   Future<void> _pickTime({
     required BuildContext context,
     required String currentTime,
     required ValueChanged<String> onSelected,
   }) async {
-    final parts = currentTime.split(':');
-    final initialHour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 9 : 9;
-    final initialMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    int initialHour = 9;
+    int initialMinute = 0;
+
+    try {
+      final clean = currentTime.trim();
+      if (clean.contains(':')) {
+        final parts = clean.split(':');
+        initialHour = int.tryParse(parts[0]) ?? 9;
+        final minutePart = parts.length > 1 ? parts[1].split(' ')[0] : '0';
+        initialMinute = int.tryParse(minutePart) ?? 0;
+        if (clean.toUpperCase().contains('PM') && initialHour < 12) {
+          initialHour += 12;
+        } else if (clean.toUpperCase().contains('AM') && initialHour == 12) {
+          initialHour = 0;
+        }
+      }
+    } catch (_) {}
 
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
     );
 
-    if (picked != null) {
-      final hourStr = picked.hour.toString().padLeft(2, '0');
-      final minuteStr = picked.minute.toString().padLeft(2, '0');
-      onSelected('$hourStr:$minuteStr');
-    }
+    if (!mounted || picked == null) return;
+
+    final period = picked.hour >= 12 ? 'PM' : 'AM';
+    final h12 = picked.hour % 12 == 0 ? 12 : picked.hour % 12;
+    final formatted12 =
+        '${h12.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')} $period';
+    onSelected(formatted12);
   }
 
   Future<void> _handleSave(StoreDeliverySettingController controller) async {
@@ -126,6 +160,8 @@ class _StoreDeliverySettingViewState
     _syncControllers(state);
 
     final isBusy = state.isLoading || state.isSaving;
+    final replacementOptions = getDeliveryDaysOptions(state.replacementDays);
+    final refundOptions = getDeliveryDaysOptions(state.refundDays);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -148,7 +184,7 @@ class _StoreDeliverySettingViewState
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                     child: state.isSaving
@@ -184,7 +220,7 @@ class _StoreDeliverySettingViewState
             ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -194,17 +230,22 @@ class _StoreDeliverySettingViewState
                   const SizedBox(height: 4),
                   _buildDropdownContainer(
                     child: DropdownButton<int>(
-                      value: _daysOptions
+                      value: replacementOptions
                               .any((o) => o.days == state.replacementDays)
                           ? state.replacementDays
-                          : _daysOptions.first.days,
+                          : replacementOptions.first.days,
                       isExpanded: true,
                       underline: const SizedBox.shrink(),
-                      items: _daysOptions
+                      items: replacementOptions
                           .map((opt) => DropdownMenuItem(
                                 value: opt.days,
-                                child: Text(opt.label,
-                                    style: const TextStyle(fontSize: 13)),
+                                child: Text(
+                                  opt.label,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF333333),
+                                  ),
+                                ),
                               ))
                           .toList(),
                       onChanged: (val) {
@@ -212,23 +253,29 @@ class _StoreDeliverySettingViewState
                       },
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 2. Refund Within
-                  _buildFieldLabel('Refund within: * (In case any escalation)'),
+                  _buildFieldLabel(
+                      'Refund within: * (In case of order cancellation)'),
                   const SizedBox(height: 4),
                   _buildDropdownContainer(
                     child: DropdownButton<int>(
-                      value: _daysOptions.any((o) => o.days == state.refundDays)
+                      value: refundOptions.any((o) => o.days == state.refundDays)
                           ? state.refundDays
-                          : _daysOptions.first.days,
+                          : refundOptions.first.days,
                       isExpanded: true,
                       underline: const SizedBox.shrink(),
-                      items: _daysOptions
+                      items: refundOptions
                           .map((opt) => DropdownMenuItem(
                                 value: opt.days,
-                                child: Text(opt.label,
-                                    style: const TextStyle(fontSize: 13)),
+                                child: Text(
+                                  opt.label,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF333333),
+                                  ),
+                                ),
                               ))
                           .toList(),
                       onChanged: (val) {
@@ -258,7 +305,10 @@ class _StoreDeliverySettingViewState
                         (i) => DropdownMenuItem(
                           value: i + 1,
                           child: Text('${i + 1} km',
-                              style: const TextStyle(fontSize: 13)),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF333333),
+                              )),
                         ),
                       ),
                       onChanged: (val) {
@@ -266,9 +316,9 @@ class _StoreDeliverySettingViewState
                       },
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // 5. Delivery Time
+                  // 5. Delivery Time (12h format display matching Android)
                   _buildFieldLabel('Delivery time: *'),
                   const SizedBox(height: 6),
                   Row(
@@ -290,18 +340,31 @@ class _StoreDeliverySettingViewState
                         ),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 10, vertical: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
+                            color: const Color(0xFFF7F7F7),
+                            border: Border.all(
+                              color: const Color(0xFFE0E0E0),
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
-                              Text(state.fromTime,
-                                  style: const TextStyle(fontSize: 13)),
+                              Text(
+                                _formatTo12Hour(state.fromTime),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF333333),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey),
+                              const Icon(
+                                Icons.access_time,
+                                size: 16,
+                                color: Color(0xFF757575),
+                              ),
                             ],
                           ),
                         ),
@@ -324,25 +387,38 @@ class _StoreDeliverySettingViewState
                         ),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 10, vertical: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
+                            color: const Color(0xFFF7F7F7),
+                            border: Border.all(
+                              color: const Color(0xFFE0E0E0),
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
-                              Text(state.toTime,
-                                  style: const TextStyle(fontSize: 13)),
+                              Text(
+                                _formatTo12Hour(state.toTime),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF333333),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey),
+                              const Icon(
+                                Icons.access_time,
+                                size: 16,
+                                color: Color(0xFF757575),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
                   // 6. Delivery By
                   _buildFieldLabel('Delivery by: *'),
@@ -361,162 +437,127 @@ class _StoreDeliverySettingViewState
                       ),
                       const SizedBox(width: 16),
                       _buildCheckboxOption(
-                        label: 'Self pickup',
+                        label: 'Self Pick Up',
                         checked: state.localDeliveryTypes.contains(3),
                         onChanged: () => controller.toggleLocalDeliveryType(3),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // 7. Delivery charges up to 2km
-                  _buildFieldLabel('Delivery charges up to 2km:'),
-                  const Text(
-                    'Applicable for lessthan minimum purchase limit',
-                    style: TextStyle(fontSize: 11, color: Colors.red),
-                  ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _deliveryFeeController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        controller.setDeliveryFee(int.tryParse(val) ?? 0);
-                      },
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black87),
-                      decoration: _inputDecoration(hintText: 'Amount'),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 8. Minimum purchase limit
-                  _buildFieldLabel('Minimum purchase limit:'),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _minPurchaseLimitController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        controller
-                            .setDeliveryFeeLimit(int.tryParse(val) ?? 0);
-                      },
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black87),
-                      decoration:
-                          _inputDecoration(hintText: 'Minimum Purchase Amount'),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 9. Delivery charge per km
-                  _buildFieldLabel('Delivery charge per km:'),
+                  // 7. Delivery Charge & Min Purchase Limit
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        width: 120,
-                        height: 40,
-                        child: TextField(
-                          controller: _perKmFeeController,
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) {
-                            controller.setPerKmFee(int.tryParse(val) ?? 0);
-                          },
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.black87),
-                          decoration: _inputDecoration(hintText: 'Amount'),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildFieldLabel('Delivery charge: *'),
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: _deliveryFeeController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                controller.setDeliveryFee(int.tryParse(val) ?? 0);
+                              },
+                              style: const TextStyle(fontSize: 13),
+                              decoration: _inputDecoration(hintText: '0'),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Applicable for orders beyond 2km',
-                          style: TextStyle(fontSize: 11, color: Colors.red),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildFieldLabel('Min. purchase limit:'),
+                            const SizedBox(height: 4),
+                            TextField(
+                              controller: _minPurchaseLimitController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                controller.setDeliveryFeeLimit(
+                                    int.tryParse(val) ?? 0);
+                              },
+                              style: const TextStyle(fontSize: 13),
+                              decoration: _inputDecoration(hintText: '0'),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                  // Subscription toggle
+                  // 8. Delivery Charge per Km
+                  _buildFieldLabel('Delivery charge per km:'),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _perKmFeeController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (val) {
+                      controller.setPerKmFee(int.tryParse(val) ?? 0);
+                    },
+                    style: const TextStyle(fontSize: 13),
+                    decoration: _inputDecoration(hintText: '0'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 9. Delivery Fee for Subscription Orders Checkbox
                   Row(
                     children: [
-                      const Expanded(
-                        child: Text(
-                          'Delivery charge applicable for subscription order?',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF555555),
-                          ),
-                        ),
-                      ),
-                      Switch(
+                      Checkbox(
                         value: state.deliveryFeeSubscription,
                         activeColor: const Color(0xFF2196F3),
-                        onChanged: controller.setDeliveryFeeSubscription,
+                        onChanged: (val) {
+                          if (val != null) {
+                            controller.setDeliveryFeeSubscription(val);
+                          }
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Delivery fee for subscription orders',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
 
-                  // 10. Cash on delivery
-                  _buildFieldLabel('Cash on delivery: *'),
-                  const SizedBox(height: 4),
+                  // 10. Limit Applied Checkbox
                   Row(
                     children: [
-                      Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: state.codLimitType == 'limit'
-                                ? 'Limit'
-                                : 'Any',
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'Any',
-                                  child: Text('Any',
-                                      style: TextStyle(fontSize: 13))),
-                              DropdownMenuItem(
-                                  value: 'Limit',
-                                  child: Text('Limit',
-                                      style: TextStyle(fontSize: 13))),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) {
-                                controller
-                                    .setCodLimitType(val.toLowerCase());
-                              }
-                            },
+                      Checkbox(
+                        value: state.isLimitApplied,
+                        activeColor: const Color(0xFF2196F3),
+                        onChanged: (val) {
+                          if (val != null) {
+                            controller.setIsLimitApplied(val);
+                          }
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Limit applied only when delivery charge is not 0',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF757575),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: TextField(
-                            controller: _codLimitController,
-                            keyboardType: TextInputType.number,
-                            enabled: state.isCodEnabled &&
-                                state.codLimitType == 'limit',
-                            onChanged: (val) {
-                              controller.setCodLimit(int.tryParse(val) ?? 0);
-                            },
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.black87),
-                            decoration: _inputDecoration(hintText: 'Amount'),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 11. Cash on Delivery Row
+                  Row(
+                    children: [
+                      _buildFieldLabel('Cash on delivery: *'),
+                      const Spacer(),
                       Switch(
                         value: state.isCodEnabled,
                         activeColor: const Color(0xFF2196F3),
@@ -526,7 +567,8 @@ class _StoreDeliverySettingViewState
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                    'Both cash on delivery and online payment cannot be turned off'),
+                                  'Both cash on delivery and online payment cannot be turned off',
+                                ),
                               ),
                             );
                           }
@@ -534,13 +576,61 @@ class _StoreDeliverySettingViewState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
 
-                  // 11. Online Payment
+                  if (state.isCodEnabled) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownContainer(
+                            child: DropdownButton<String>(
+                              value: state.codLimitType,
+                              isExpanded: true,
+                              underline: const SizedBox.shrink(),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'any',
+                                  child: Text('Any',
+                                      style: TextStyle(fontSize: 13)),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'limit',
+                                  child: Text('Limit',
+                                      style: TextStyle(fontSize: 13)),
+                                ),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  controller.setCodLimitType(val);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        if (state.codLimitType == 'limit') ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _codLimitController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                controller.setCodLimit(int.tryParse(val) ?? 0);
+                              },
+                              style: const TextStyle(fontSize: 13),
+                              decoration: _inputDecoration(hintText: '0'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+
+                  // 12. Online Payment Switch
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildFieldLabel('Online Payment: *'),
+                      _buildFieldLabel('Online payment: *'),
+                      const Spacer(),
                       Switch(
                         value: state.isOnlinePaymentEnabled,
                         activeColor: const Color(0xFF2196F3),
@@ -550,7 +640,8 @@ class _StoreDeliverySettingViewState
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                    'Both cash on delivery and online payment cannot be turned off'),
+                                  'Both cash on delivery and online payment cannot be turned off',
+                                ),
                               ),
                             );
                           }
@@ -560,40 +651,60 @@ class _StoreDeliverySettingViewState
                   ),
                   const SizedBox(height: 14),
 
-                  // 12. Store Availability
-                  _buildFieldLabel('Store Availability: *'),
+                  // 13. Available Days
+                  _buildFieldLabel('Available days: *'),
                   const SizedBox(height: 6),
                   Wrap(
-                    spacing: 12,
+                    spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _buildDayCheck('Sunday', 'SUN', state, controller),
-                      _buildDayCheck('Monday', 'MON', state, controller),
-                      _buildDayCheck('Tuesday', 'TUE', state, controller),
-                      _buildDayCheck('Wednesday', 'WED', state, controller),
-                      _buildDayCheck('Thursday', 'THU', state, controller),
-                      _buildDayCheck('Friday', 'FRI', state, controller),
-                      _buildDayCheck('Saturday', 'SAT', state, controller),
+                      for (final day in [
+                        'SUN',
+                        'MON',
+                        'TUE',
+                        'WED',
+                        'THU',
+                        'FRI',
+                        'SAT'
+                      ])
+                        FilterChip(
+                          label: Text(day),
+                          selected: state.availability.contains(day),
+                          selectedColor: const Color(0xFF2196F3),
+                          checkmarkColor: Colors.white,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: state.availability.contains(day)
+                                ? Colors.white
+                                : Colors.black87,
+                          ),
+                          backgroundColor: const Color(0xFFF7F7F7),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            side: BorderSide(
+                              color: state.availability.contains(day)
+                                  ? const Color(0xFF2196F3)
+                                  : const Color(0xFFE0E0E0),
+                              width: 0.5,
+                            ),
+                          ),
+                          onSelected: (_) =>
+                              controller.toggleAvailabilityDay(day),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // 13. Separator Line: Ship To Other Locations
+                  // 14. Separator Line: Ship To Other Locations
                   _buildSeparatorWithChip('Ship To Other Locations'),
                   const SizedBox(height: 14),
 
-                  // Enable Other Locations
+                  // 15. Other Location Switch
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Enable Other locations:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF333333),
-                        ),
-                      ),
+                      _buildFieldLabel('Ship to other locations:'),
+                      const Spacer(),
                       Switch(
                         value: state.isOtherLocationEnabled,
                         activeColor: const Color(0xFF2196F3),
@@ -605,15 +716,7 @@ class _StoreDeliverySettingViewState
                   ),
 
                   if (state.isOtherLocationEnabled) ...[
-                    const SizedBox(height: 12),
-                    _buildFieldLabel('Select Target Countries: *'),
-                    const SizedBox(height: 4),
-                    _buildDropdownContainer(
-                      child: const Text('India',
-                          style: TextStyle(fontSize: 13, color: Colors.black87)),
-                    ),
-                    const SizedBox(height: 14),
-
+                    const SizedBox(height: 8),
                     _buildFieldLabel('Delivery by: *'),
                     Row(
                       children: [
@@ -632,50 +735,52 @@ class _StoreDeliverySettingViewState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-
-                    _buildFieldLabel('Delivery charge:'),
-                    const Text(
-                      'Applicable for lessthan minimum purchase limit',
-                      style: TextStyle(fontSize: 11, color: Colors.red),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 40,
-                      child: TextField(
-                        controller: _otherFeeController,
-                        keyboardType: TextInputType.number,
-                        onChanged: (val) {
-                          controller
-                              .setOtherDeliveryFee(int.tryParse(val) ?? 0);
-                        },
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.black87),
-                        decoration: _inputDecoration(hintText: 'Amount'),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    _buildFieldLabel('Minimum purchase limit:'),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 40,
-                      child: TextField(
-                        controller: _otherLimitController,
-                        keyboardType: TextInputType.number,
-                        onChanged: (val) {
-                          controller.setOtherDeliveryFeeLimit(
-                              int.tryParse(val) ?? 0);
-                        },
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.black87),
-                        decoration: _inputDecoration(
-                            hintText: 'Minimum Purchase Amount'),
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFieldLabel('Delivery charge: *'),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: _otherFeeController,
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  controller.setOtherDeliveryFee(
+                                      int.tryParse(val) ?? 0);
+                                },
+                                style: const TextStyle(fontSize: 13),
+                                decoration: _inputDecoration(hintText: '0'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFieldLabel('Min. purchase limit:'),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: _otherLimitController,
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  controller.setOtherDeliveryFeeLimit(
+                                      int.tryParse(val) ?? 0);
+                                },
+                                style: const TextStyle(fontSize: 13),
+                                decoration: _inputDecoration(hintText: '0'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 28),
                 ],
               ),
             ),
@@ -690,7 +795,7 @@ class _StoreDeliverySettingViewState
       label,
       style: const TextStyle(
         fontSize: 13,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         color: Color(0xFF333333),
       ),
     );
@@ -698,13 +803,13 @@ class _StoreDeliverySettingViewState
 
   Widget _buildDropdownContainer({required Widget child}) {
     return Container(
-      height: 40,
+      height: 38,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(6),
+        color: const Color(0xFFF7F7F7),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 0.5),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: child,
     );
@@ -724,54 +829,42 @@ class _StoreDeliverySettingViewState
             value: checked,
             activeColor: const Color(0xFF2196F3),
             onChanged: (_) => onChanged(),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDayCheck(
-    String label,
-    String code,
-    StoreDeliverySettingState state,
-    StoreDeliverySettingController controller,
-  ) {
-    final checked = state.availability.contains(code);
-    return InkWell(
-      onTap: () => controller.toggleAvailabilityDay(code),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Checkbox(
-            value: checked,
-            activeColor: const Color(0xFF2196F3),
-            onChanged: (_) => controller.toggleAvailabilityDay(code),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF333333),
+            ),
           ),
-          Text(label, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );
   }
 
   Widget _buildSeparatorWithChip(String label) {
-    return Stack(
-      alignment: Alignment.center,
+    return Row(
       children: [
-        const Divider(color: Color(0xFF81C784), thickness: 1),
+        const Expanded(
+          child: Divider(color: Color(0xFFE0E0E0), thickness: 1),
+        ),
         Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2196F3),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Text(
             label,
             style: const TextStyle(
+              color: Colors.white,
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF388E3C),
+              fontWeight: FontWeight.bold,
             ),
           ),
+        ),
+        const Expanded(
+          child: Divider(color: Color(0xFFE0E0E0), thickness: 1),
         ),
       ],
     );
@@ -779,21 +872,23 @@ class _StoreDeliverySettingViewState
 
   InputDecoration _inputDecoration({required String hintText}) {
     return InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFFF7F7F7),
       counterText: '',
       hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
       ),
     );
   }

@@ -32,6 +32,8 @@ class StoreDeliverySettingController
       categoryId: _store.categoryId,
     );
 
+    if (!mounted) return;
+
     if (config == null) {
       state = state.copyWith(
         isLoading: false,
@@ -260,6 +262,7 @@ class StoreDeliverySettingController
       dataPayload: dataPayload,
     );
 
+    if (!mounted) return (success: false, message: '');
     state = state.copyWith(isSaving: false);
 
     if (res.success) {

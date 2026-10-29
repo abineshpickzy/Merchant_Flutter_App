@@ -32,6 +32,8 @@ class LicenceDetailsController extends StateNotifier<LicenceDetailsState> {
       categoryId: _store.categoryId,
     );
 
+    if (!mounted) return;
+
     if (res == null) {
       state = state.copyWith(
         isLoading: false,
@@ -100,6 +102,7 @@ class LicenceDetailsController extends StateNotifier<LicenceDetailsState> {
       isAutoInvoice: state.isAutoInvoice,
     );
 
+    if (!mounted) return (success: false, message: '');
     state = state.copyWith(isSaving: false);
 
     if (res.success) {

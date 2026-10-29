@@ -40,11 +40,17 @@ class AdditionalSettingsRepository {
         final innerData = data['data'];
         if (innerData is Map<String, dynamic>) {
           final delivery = innerData['delivery'] as Map<String, dynamic>? ?? {};
-          final pkg = delivery['packaging_charge'] as Map<String, dynamic>? ?? {};
+          final pkg = delivery['packaging_charge'] as Map<String, dynamic>? ??
+              innerData['packaging_charge'] as Map<String, dynamic>? ??
+              {};
           final autoOpenClose = innerData['allow_auto_openclose'] == true;
-          final timingRsp = innerData['shop_timing'] as Map<String, dynamic>? ?? {};
-          final isAuto = timingRsp['is_automatic'] == true;
-          final models = timingRsp['shoptiming_models'] as List<dynamic>?;
+          final timingRsp = innerData['shop_time'] as Map<String, dynamic>? ??
+              innerData['shop_timing'] as Map<String, dynamic>? ??
+              {};
+          final isAuto = timingRsp['is_automatic'] == true ||
+              timingRsp['automatic'] == true;
+          final models = timingRsp['shoptiming_models'] as List<dynamic>? ??
+              timingRsp['shop_timing'] as List<dynamic>?;
 
           final slots = <ShopTimingSlot>[];
           if (models != null) {
@@ -58,11 +64,24 @@ class AdditionalSettingsRepository {
             }
           }
 
+          final isAgencyResponsible = pkg['agency_material'] == true ||
+              pkg['agency_responsibility'] == true ||
+              pkg['agencyResponsibility'] == true;
+
+          final price = (pkg['packaging_price'] as num?)?.toDouble() ??
+              (pkg['package_price'] as num?)?.toDouble() ??
+              0.0;
+
+          final type = (pkg['pricing_type'] as num?)?.toInt() ?? 2;
+
+          final limit = (pkg['applied_limit'] as num?)?.toInt() ??
+              (pkg['min_limit'] as num?)?.toInt();
+
           return (
-            packagePrice: (pkg['package_price'] as num?)?.toDouble() ?? 0.0,
-            pricingType: (pkg['pricing_type'] as num?)?.toInt() ?? 2,
-            minLimit: (pkg['min_limit'] as num?)?.toInt(),
-            agencyResponsibility: pkg['agency_responsibility'] == true,
+            packagePrice: price,
+            pricingType: type,
+            minLimit: limit,
+            agencyResponsibility: isAgencyResponsible,
             allowAutoOpenClose: autoOpenClose,
             isAutomatic: isAuto,
             timingSlots: slots,
@@ -88,20 +107,30 @@ class AdditionalSettingsRepository {
   }) async {
     try {
       final packagingCharge = <String, dynamic>{
-        'package_price': packagePrice,
         'pricing_type': pricingType,
+        'package_price': packagePrice,
+        'packaging_price': packagePrice,
+        'agency_material': agencyResponsibility,
         'agency_responsibility': agencyResponsibility,
       };
       if (minLimit != null) {
         packagingCharge['min_limit'] = minLimit;
+        packagingCharge['applied_limit'] = minLimit;
       }
+
+      final validSlots = timingSlots
+          .where((s) => s.startTime.isNotEmpty && s.endTime.isNotEmpty)
+          .map((s) => {
+                'start_time': s.startTime,
+                'end_time': s.endTime,
+              })
+          .toList();
 
       final shopTiming = <String, dynamic>{
         'is_automatic': isAutomatic,
+        'automatic': isAutomatic,
+        'shop_timing': validSlots,
       };
-      if (isAutomatic) {
-        shopTiming['shop_open_close'] = timingSlots.map((s) => s.toJson()).toList();
-      }
 
       final response = await _apiClient.post(
         ApiEndpoints.shopAddSettings,
@@ -109,6 +138,7 @@ class AdditionalSettingsRepository {
           'shop_id': shopId,
           'category_id': categoryId,
           'packaging_charge': packagingCharge,
+          'shop_time': shopTiming,
           'shop_timing': shopTiming,
         },
       );

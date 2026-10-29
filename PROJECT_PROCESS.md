@@ -3782,3 +3782,103 @@ awData is List\ and safely extract the first associate object.
 - **Verification Results**:
   - `flutter analyze`: **0 issues found (100% clean)**.
   - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+
+
+## Phase 142: Project-Wide StateNotifier & Async Lifecycle Audit (`mounted` Guard Protection)
+- **Date**: 2026-10-28
+- **Objective**: Fix `StateError (Bad state: Tried to use BillingController after dispose was called. Consider checking mounted.)` and systematically audit all Riverpod controllers and asynchronous view callbacks across the project to prevent crashes when switching tabs or navigating away during in-flight network requests.
+- **Root Cause Analysis**:
+  - `BillingController` is an `autoDispose` provider (`billingControllerProvider = StateNotifierProvider.autoDispose...`).
+  - When users switch tabs or navigate quickly, Riverpod disposes `BillingController`.
+  - In-flight HTTP operations (`loadBillingData()`, `loadMore()`) subsequently resumed and attempted `state = state.copyWith(...)` without checking `if (!mounted) return;`.
+  - In `StateNotifier`, attempting to mutate state after disposal throws:
+    `StateError: Tried to use <Controller> after dispose was called. Consider checking mounted.`
+- **Architectural Safeguards Implemented**:
+  1. **[`BillingController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/controller/billing_controller.dart)**:
+     - Guarded `loadBillingData()`: Added `if (!mounted) return;` immediately after `await Future.wait(...)` and inside the `catch (e)` block prior to setting state.
+     - Guarded `loadMore()`: Added `if (!mounted) return;` after `await _repository.getTransactions(...)` and in `catch (_)`.
+  2. **[`SettingController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/controller/setting_controller.dart)**:
+     - Guarded `loadSettings()`: Added `if (!mounted) return;` after `await _repository.getSettingBasic(...)` and in `catch (e)`.
+     - Guarded `setShopOpen()`: Added `if (!mounted) return false;` after `await _repository.updateSetting(...)`.
+     - Guarded `setShopBusy()`: Added `if (!mounted) return false;` after `await _repository.updateSetting(...)`.
+     - Guarded `setPrivateShopOpen()`: Added `if (!mounted) return false;` after `await _repository.updateSetting(...)`.
+     - Guarded `detachShop()`: Added `if (!mounted) return result;` after `await _repository.detachShop(...)`.
+  3. **[`StoreDeliverySettingController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/controller/delivery_setting_controller.dart)**:
+     - Guarded `loadInitialData()`: Added `if (!mounted) return;` after `await _repo.getDeliveryConfig(...)`.
+     - Guarded `saveDeliveryConfig()`: Added `if (!mounted) return (success: false, message: '');` after `await _repo.saveDeliveryConfig(...)`.
+  4. **[`AdditionalSettingsController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/controller/additional_settings_controller.dart)**:
+     - Guarded `loadInitialData()`: Added `if (!mounted) return;` after `await _repo.getAdditionalSettings(...)`.
+     - Guarded `saveSettings()`: Added `if (!mounted) return (success: false, message: '');` after `await _repo.saveAdditionalSettings(...)`.
+  5. **[`LicenceDetailsController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/licence_details/controller/licence_details_controller.dart)**:
+     - Guarded `loadInitialData()`: Added `if (!mounted) return;` after `await _repo.getLicenceDetails(...)`.
+     - Guarded `saveLicence()`: Added `if (!mounted) return (success: false, message: '');` after `await _repo.saveLicenceDetails(...)`.
+  6. **[`ShopInfoController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/shop_info/controller/shop_info_controller.dart)**:
+     - Guarded `loadInitialData()`: Added `if (!mounted) return;` after `await _repo.getShopInfo(...)`.
+     - Guarded `saveShopInfo()`: Added `if (!mounted) return (success: false, message: '');` after `await _repo.saveShopInfo(...)`.
+  7. **[`ConfigureShopUiController`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/configure_shop_ui/controller/configure_shop_ui_controller.dart)**:
+     - Guarded `loadInitialData()`: Added `if (!mounted) return;` after `await _repo.getFrameList(...)`.
+     - Guarded `saveConfiguration()`: Added `if (!mounted) return (success: false, message: '');` after `await _repo.saveFrame(...)`.
+  8. **Core Services & Asynchronous Dialogs**:
+     - [`LocationServiceNotifier`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/providers/location_service_provider.dart): Added `if (!mounted) return;` guards in GPS status and accuracy checks.
+     - [`PermissionNotifier`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/providers/permission_notifier_provider.dart): Guarded `initCheck()`, `requestFirstLaunchPermissions()`, `recheckPermissions()`, and `updateLocationServiceStatus()`.
+     - Audited and added `if (!mounted) return;` before `setState()` in date/time pickers across [`BillingDateFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_date_filter_header.dart), [`OrderHistoryFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_filter_header.dart), [`StoreDashboardTabView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/storedashboard/view/store_dashboard_tab_view.dart), and [`MfdExpDialog`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/orders/view/widgets/mfd_exp_dialog.dart).
+- **Verification Results**:
+  - `flutter analyze`: **No issues found! (ran in 25.8s, 100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+
+
+## Phase 143: Reusable Core Date Filter Header & Order History Details Screen Implementation
+- **Date**: 2026-10-28
+- **Objective**:
+  1. Extract and standardize the date range filter header UI into a project-wide reusable core widget (`AppDateRangeFilterHeader`) located at `lib/core/widgets/app_date_range_filter_header.dart`.
+  2. Unify both [`BillingDateFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_date_filter_header.dart) and [`OrderHistoryFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_filter_header.dart) to share the exact same UI and functional logic.
+  3. Implement the complete [`OrderHistoryDetailsView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/order_history_details_view.dart) with 1:1 visual and functional parity to Android app (`OrderHistoryDetailsFragment.java`, `fragment_delivery_details.xml`, and `OrderHistoryDetailsAdapter.java`).
+- **Architectural Implementation**:
+  1. **Reusable Core Widget ([`AppDateRangeFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/widgets/app_date_range_filter_header.dart))**:
+     - `DateRangeFilterType`: enum supporting `today`, `sevenDays`, `thirtyDays`, and `custom`.
+     - Layout matching Android `balancer_header_txt` with background `#E0E0E0`, rounded container with bordered tabs (blue selected fill, transparent unselected), From/To date pickers with calendar icons, and "Go" button.
+     - Exported in [`widgets.dart`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/core/widgets/widgets.dart).
+  2. **Unified Filter Consumers**:
+     - [`BillingDateFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/billings/view/widgets/billing_date_filter_header.dart) and [`OrderHistoryFilterHeader`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/widgets/order_history_filter_header.dart) now wrap `AppDateRangeFilterHeader`.
+  3. **Order History Details Screen ([`OrderHistoryDetailsView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/order_history_details_view.dart))**:
+     - Standardized [`StoreTabAppBar`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/widgets/store_tab_app_bar.dart) with dynamic order title and back navigation.
+     - **Card 1 (Customer & Order Summary)**: Circular customer avatar, customer name, order ID + category in blue, delivery method in blue, customer preference time in blue, total purchase amount with tip, payment status, distance with location icon, order timestamp label, customer rating bar, and customer unverified warning banner.
+     - **Card 2 (Product Details & Items List)**:
+       - Header displaying `"Product Details"` and live `"Total Products : <count>"`.
+       - Reactive `orderProductsProvider` fetching line items from `order/viewProducts` (or `order/escalate/viewProducts` if escalated).
+       - Product rows with image thumbnail, title, manufacturer, weight/unit, quantity, price (negative red for replacement), MFD (red) and EXP (green) dates, and verification status badges matching Android (`Customer Verified`, `Undelivered request`, `Replacement request`, or `Customer not verified`).
+  4. **Navigation Integration**:
+     - Tapping any order in [`OrderHistoryView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/order_history/view/order_history_view.dart) pushes `OrderHistoryDetailsView` in the nested tab Navigator.
+- **Verification Results**:
+  - `flutter analyze`: **No issues found! (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+
+
+## Phase 144: Batch 2 Polish — Store Details, Delivery Settings, and Additional Settings UI & Functionality Parity
+- **Date**: 2026-10-28
+- **Objective**:
+  1. **Store Details Setting (`StoreDetailsSettingView`)**:
+     - Strictly enforce non-editable fields (`edit_store_name`, `edit_store_address`, `country_spinner`, `state_spinner`, `city_spinner`, and `edit_pin_code`) matching Android `settings_store_details.xml` (`android:focusable="false"`, `android:focusableInTouchMode="false"`, `setEnabled(false)`).
+     - Prevent auto-fetching current device location on launch/init; location fetch now occurs **only** when the user taps the location button.
+     - Implement the exact Android `ic_location_current_m` custom painter (`StoreLocationPinIcon`) with teal/green shadow base, vibrant pink/red pin gradient (`#E91E63` to `#FF5252`), and center target.
+     - Match exact input styling, `#F7F7F7` fill, `#E0E0E0` border (`single_corner_radius_gray_btn_bg_stoke`), and 12-13sp typography.
+  2. **Store Delivery Setting (`StoreDeliverySettingView`)**:
+     - Fix Product Replacement Within and Refund Within dropdowns: accurately map backend values (`replacement.days` / `replacement_days`, `refund.days` / `refund_days`) into comprehensive options list (`0` = None, `1`, `2`, `3`, `4`, `5`, `7`, `10`, `14`, `15`, `21`, `30` = 1 Month, `60`, `90` = 3 Month, `180` = 6 Month, `365` = 1 Year) with dynamic fallback inclusion ensuring zero dropdown mismatches.
+     - Fix Delivery Time format: resolve raw 24-hour time strings by converting and displaying 12-hour AM/PM format (e.g. `09:00 AM`, `10:00 PM`) matching Android `convertTime(from_time)`.
+     - Align input fields, separator badges (`Nearby Location`, `Ship To Other Locations`), and colors with `settings_store_delivery_config.xml`.
+  3. **Additional Settings (`AdditionalSettingsView`)**:
+     - Resolve Agency Responsibility checkbox: correctly bind to backend property `agency_material` (matching Android `@SerializedName("agency_material")` in `PackagingCharge.java`) alongside `agency_responsibility` and `agencyResponsibility`.
+     - When agency responsibility is true: lock fields, display padlock icon, and disable editing; when tapped, display confirmation dialog with Accept/Cancel actions.
+     - Fix shop timing slot 24-hour issue: display opening and closing times in 12-hour AM/PM format (`09:00 AM`, `10:00 PM`) with Android-accurate colored text (`#E91E63` opening, `#03A9F4` closing).
+     - Match Android `merchant_border_replacement` outline group cards with green border `#4CAF50` and overlapping header badges ("Packaging", "Shop Timing"), and styled "+ Add Another Time Slot" button.
+- **Architectural Implementation**:
+  1. [`StoreLocationPinIcon`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/view/widgets/store_location_pin_icon.dart): CustomPainter accurately rendering Android's `ic_location_current_m`.
+  2. [`StoreDetailsSettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/store_details/view/store_details_setting_view.dart): Read-only non-editable fields with `#F7F7F7` fill; direct current GPS location fetch and reverse-geocoding triggered only upon tapping the location pin icon (without pushing any intermediate location selection screen).
+  3. [`DeliveryConfigData`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/model/delivery_setting_model.dart): Dynamic `getDeliveryDaysOptions()` and fallback parser for replacement and refund days.
+  4. [`StoreDeliverySettingView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/delivery_settings/view/store_delivery_setting_view.dart): 12-hour AM/PM time formatting, styled inputs, and chips.
+  5. [`AdditionalSettingsRepository`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/repository/additional_settings_repository.dart): Fixed deserialization to include `agency_material`, `applied_limit`, and `packaging_price`.
+  6. [`AdditionalSettingsView`](file:///e:/Abinesh/PickZy_Software/Bayfay/bayfay_flutter/merchant_app/flutter_app/bayfay_merchant_flutter/lib/features/store/view/tabs/settings/subpages/additional_settings/view/additional_settings_view.dart): Outline group card style (`merchant_border_replacement`), agency dialog, and 12-hour slot time pickers.
+- **Verification Results**:
+  - `flutter analyze`: **No issues found! (100% clean)**.
+  - `flutter test test/store_screen_test.dart`: **All 5 tests passed (100% pass rate)**.
+

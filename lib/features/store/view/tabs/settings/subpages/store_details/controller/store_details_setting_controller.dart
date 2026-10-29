@@ -169,6 +169,26 @@ class StoreDetailsSettingController
     state = state.copyWith(streetAddress: val.trim());
   }
 
+  void updateLocationFromPicked({
+    required String street,
+    required double lat,
+    required double lng,
+    String? pincode,
+    String? city,
+    String? stateName,
+    String? countryName,
+  }) {
+    state = state.copyWith(
+      streetAddress: street,
+      latitude: lat,
+      longitude: lng,
+      pincode: (pincode != null && pincode.isNotEmpty) ? pincode : state.pincode,
+      city: (city != null && city.isNotEmpty) ? city : state.city,
+      state: (stateName != null && stateName.isNotEmpty) ? stateName : state.state,
+      country: (countryName != null && countryName.isNotEmpty) ? countryName : state.country,
+    );
+  }
+
   /// Request OTP for primary mobile. Returns true if OTP dialog should open, false if auto-verified or error.
   Future<({bool openDialog, String message})> sendOtpPrimary() async {
     final mobileNumStr = state.primaryMobile.trim();

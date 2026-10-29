@@ -56,6 +56,8 @@ class _StoreDashboardTabViewState extends ConsumerState<StoreDashboardTabView>
       lastDate: now,
     );
 
+    if (!mounted) return;
+
     if (picked != null) {
       setState(() {
         if (isFrom) {

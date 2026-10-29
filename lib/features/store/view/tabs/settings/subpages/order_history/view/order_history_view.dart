@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bayfay_merchant_flutter/features/dashboard/model/store_model.dart';
 import 'package:bayfay_merchant_flutter/features/store/view/widgets/store_tab_app_bar.dart';
 import '../controller/order_history_controller.dart';
+import 'order_history_details_view.dart';
 import 'widgets/order_history_card.dart';
 import 'widgets/order_history_filter_header.dart';
 import 'widgets/order_history_skeleton.dart';
@@ -124,7 +125,14 @@ class _OrderHistoryViewState extends ConsumerState<OrderHistoryView> {
                       return OrderHistoryCard(
                         order: order,
                         onTap: () {
-                          _showOrderDetailsSheet(order);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => OrderHistoryDetailsView(
+                                order: order,
+                                store: widget.store,
+                              ),
+                            ),
+                          );
                         },
                       );
                     },
@@ -135,47 +143,6 @@ class _OrderHistoryViewState extends ConsumerState<OrderHistoryView> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showOrderDetailsSheet(dynamic order) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Order Details - ${order.orderId}',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text('Customer: ${order.customer?.name ?? "N/A"}'),
-              Text('Amount: ₹${order.amount.toStringAsFixed(2)}'),
-              Text('Delivery: ${order.deliveryType}'),
-              Text('Payment: ${order.paymentType}'),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

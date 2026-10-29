@@ -7,6 +7,46 @@ class DeliverySettingOption {
   const DeliverySettingOption({required this.days, required this.label});
 }
 
+List<DeliverySettingOption> getDeliveryDaysOptions(int selectedDays) {
+  final baseList = <int>[
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    10,
+    14,
+    15,
+    21,
+    30,
+    60,
+    90,
+    180,
+    365,
+  ];
+  final set = Set<int>.from(baseList);
+  if (selectedDays >= 0) {
+    set.add(selectedDays);
+  }
+  final sorted = set.toList()..sort();
+  return sorted.map((d) {
+    if (d == 0) return const DeliverySettingOption(days: 0, label: 'None');
+    if (d % 365 == 0) {
+      final years = d ~/ 365;
+      return DeliverySettingOption(
+          days: d, label: '$years ${years == 1 ? 'Year' : 'Years'}');
+    }
+    if (d % 30 == 0) {
+      final months = d ~/ 30;
+      return DeliverySettingOption(
+          days: d, label: '$months ${months == 1 ? 'Month' : 'Months'}');
+    }
+    return DeliverySettingOption(days: d, label: '$d Days');
+  }).toList();
+}
+
 class DeliveryConfigData {
   final int replacementDays;
   final int refundDays;
@@ -89,9 +129,19 @@ class DeliveryConfigData {
 
     final privShop = json['private_shop'] as Map<String, dynamic>?;
 
+    final replDays = (replacement['days'] as num?)?.toInt() ??
+        (json['replacement_days'] as num?)?.toInt() ??
+        (json['replacementDays'] as num?)?.toInt() ??
+        0;
+
+    final refDays = (refund['days'] as num?)?.toInt() ??
+        (json['refund_days'] as num?)?.toInt() ??
+        (json['refundDays'] as num?)?.toInt() ??
+        0;
+
     return DeliveryConfigData(
-      replacementDays: (replacement['days'] as num?)?.toInt() ?? 7,
-      refundDays: (refund['days'] as num?)?.toInt() ?? 7,
+      replacementDays: replDays,
+      refundDays: refDays,
       maxRadius: maxRad > 0 ? maxRad : 10,
       currentRadius: (local['radius'] as num?)?.toInt() ?? 5,
       fromTime: local['from']?.toString() ?? '09:00',

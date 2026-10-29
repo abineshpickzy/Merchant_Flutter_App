@@ -445,6 +445,7 @@ class _MfdExpDateEntryDialogState
       firstDate: DateTime(2015),
       lastDate: now,
     );
+    if (!mounted) return;
     if (picked != null) {
       setState(() {
         _manufactureCalendar = picked;
@@ -461,6 +462,7 @@ class _MfdExpDateEntryDialogState
       firstDate: now,
       lastDate: DateTime(2035),
     );
+    if (!mounted) return;
     if (picked != null) {
       setState(() {
         _expiryCalendar = picked;

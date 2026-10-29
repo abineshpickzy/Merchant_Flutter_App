@@ -91,6 +91,7 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
       final location = await _safeCheck(Permission.location);
       final notification = await _safeCheck(Permission.notification);
       final isGpsOn = await _safeCheckLocationService();
+      if (!mounted) return;
 
       state = AppPermissionState(
         isFirstTime: true,
@@ -178,6 +179,8 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
       permanentlyDenied.add(Permission.notification);
     }
 
+    if (!mounted) return;
+
     state = AppPermissionState(
       isFirstTime: false,
       isChecking: false,
@@ -214,6 +217,7 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
   /// Requests push notification permission on-demand and updates state.
   Future<PermissionStatus> requestNotificationPermission() async {
     final status = await _requestIfNotGranted(Permission.notification);
+    if (!mounted) return status;
     state = state.copyWith(notificationStatus: status);
     return status;
   }
@@ -222,6 +226,7 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
   /// Updates [isLocationServiceEnabled] in state and returns the current status.
   Future<bool> checkLocationService() async {
     final isGpsOn = await _safeCheckLocationService();
+    if (!mounted) return isGpsOn;
     if (state.isLocationServiceEnabled != isGpsOn) {
       state = state.copyWith(isLocationServiceEnabled: isGpsOn);
     }
@@ -230,6 +235,7 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
 
   /// Synchronously updates [isLocationServiceEnabled] in state.
   void updateLocationServiceStatus(bool isEnabled) {
+    if (!mounted) return;
     if (state.isLocationServiceEnabled != isEnabled) {
       state = state.copyWith(isLocationServiceEnabled: isEnabled);
     }
@@ -251,6 +257,8 @@ class PermissionNotifier extends StateNotifier<AppPermissionState> {
     if (notification.isPermanentlyDenied) {
       permanentlyDenied.add(Permission.notification);
     }
+
+    if (!mounted) return;
 
     state = state.copyWith(
       isFirstTime: false,

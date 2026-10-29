@@ -296,7 +296,7 @@ class _HomeBodyViewState extends ConsumerState<HomeBodyView> {
                       children: [
                         for (var i = 0; i < storeList.length; i += 3)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.only(bottom: 12),
                             child: IntrinsicHeight(
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,

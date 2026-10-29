@@ -27,6 +27,8 @@ class ShopInfoController extends StateNotifier<ShopInfoState> {
 
     final res = await _repo.getShopInfo(shopId: _store.id);
 
+    if (!mounted) return;
+
     if (res == null) {
       state = state.copyWith(
         isLoading: false,
@@ -120,6 +122,7 @@ class ShopInfoController extends StateNotifier<ShopInfoState> {
       videoUrls: state.videoUrls,
     );
 
+    if (!mounted) return (success: false, message: '');
     state = state.copyWith(isSaving: false);
 
     if (res.success) {

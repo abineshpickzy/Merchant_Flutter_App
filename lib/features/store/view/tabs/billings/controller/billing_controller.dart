@@ -109,6 +109,8 @@ class BillingController extends StateNotifier<BillingState> {
         ),
       ]);
 
+      if (!mounted) return;
+
       final transactions = results[0] as List<BillingTransaction>;
       final summary = results[1] as BillingSummaryModel?;
 
@@ -120,6 +122,7 @@ class BillingController extends StateNotifier<BillingState> {
         hasMore: transactions.length >= _limit,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -147,6 +150,8 @@ class BillingController extends StateNotifier<BillingState> {
         limit: _limit,
       );
 
+      if (!mounted) return;
+
       final combined = [...state.transactions, ...moreItems];
 
       state = state.copyWith(
@@ -156,6 +161,7 @@ class BillingController extends StateNotifier<BillingState> {
         hasMore: moreItems.length >= _limit,
       );
     } catch (_) {
+      if (!mounted) return;
       state = state.copyWith(isLoadingMore: false);
     }
   }

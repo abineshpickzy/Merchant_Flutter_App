@@ -60,6 +60,7 @@ class OrderHistoryItem {
   final String verified;
   final String cancelled;
   final String rejected;
+  final String customerPreferenceTime;
   final OrderHistoryCustomer? customer;
 
   const OrderHistoryItem({
@@ -85,10 +86,24 @@ class OrderHistoryItem {
     this.verified = '',
     this.cancelled = '',
     this.rejected = '',
+    this.customerPreferenceTime = '',
     this.customer,
   });
 
   factory OrderHistoryItem.fromJson(Map<String, dynamic> json) {
+    String prefTime = '';
+    if (json['preferences'] is Map<String, dynamic>) {
+      final pref = json['preferences'] as Map<String, dynamic>;
+      if (pref['is_anytime'] == true) {
+        prefTime = 'Immediate';
+      } else if (pref['custom_time'] is Map<String, dynamic>) {
+        final ct = pref['custom_time'] as Map<String, dynamic>;
+        final from = (ct['from'] ?? '').toString();
+        final to = (ct['to'] ?? '').toString();
+        prefTime = from.isNotEmpty && to.isNotEmpty ? '$from : $to' : (from.isNotEmpty ? from : to);
+      }
+    }
+
     return OrderHistoryItem(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       orderId: (json['order_id'] ?? json['orderId'] ?? '').toString(),
@@ -112,6 +127,7 @@ class OrderHistoryItem {
       verified: (json['verified'] ?? '').toString(),
       cancelled: (json['cancelled'] ?? '').toString(),
       rejected: (json['rejected'] ?? '').toString(),
+      customerPreferenceTime: prefTime,
       customer: json['customer'] is Map<String, dynamic>
           ? OrderHistoryCustomer.fromJson(json['customer'] as Map<String, dynamic>)
           : null,

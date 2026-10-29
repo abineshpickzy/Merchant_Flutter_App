@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:bayfay_merchant_flutter/features/dashboard/model/store_model.dart';
 import 'package:bayfay_merchant_flutter/features/store/view/widgets/store_tab_app_bar.dart';
 import '../controller/additional_settings_controller.dart';
@@ -47,25 +48,72 @@ class _AdditionalSettingsViewState
     }
   }
 
+  String _formatTo12Hour(String time) {
+    final clean = time.trim();
+    if (clean.isEmpty) return '00:00';
+    final upper = clean.toUpperCase();
+    if (upper.contains('AM') || upper.contains('PM')) return clean;
+
+    try {
+      if (clean.contains('T')) {
+        final dt = DateTime.parse(clean).toLocal();
+        return DateFormat('hh:mm a').format(dt);
+      }
+    } catch (_) {}
+
+    try {
+      final parts = clean.split(' ');
+      final timePart = parts.isNotEmpty ? parts.last : clean;
+      final timeTokens = timePart.split(':');
+      if (timeTokens.isNotEmpty) {
+        final hour = int.parse(timeTokens[0]);
+        final minute =
+            timeTokens.length > 1 ? int.parse(timeTokens[1].split('.')[0]) : 0;
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final h12 = hour % 12 == 0 ? 12 : hour % 12;
+        return '${h12.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+      }
+    } catch (_) {}
+
+    return clean;
+  }
+
   Future<void> _pickTime({
     required BuildContext context,
     required String currentTime,
     required ValueChanged<String> onSelected,
   }) async {
-    final parts = currentTime.split(':');
-    final initialHour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 9 : 9;
-    final initialMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    int initialHour = 9;
+    int initialMinute = 0;
+
+    try {
+      final clean = currentTime.trim();
+      if (clean.contains(':')) {
+        final parts = clean.split(':');
+        initialHour = int.tryParse(parts[0]) ?? 9;
+        final minutePart = parts.length > 1 ? parts[1].split(' ')[0] : '0';
+        initialMinute = int.tryParse(minutePart) ?? 0;
+        if (clean.toUpperCase().contains('PM') && initialHour < 12) {
+          initialHour += 12;
+        } else if (clean.toUpperCase().contains('AM') && initialHour == 12) {
+          initialHour = 0;
+        }
+      }
+    } catch (_) {}
 
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
     );
 
-    if (picked != null) {
-      final hourStr = picked.hour.toString().padLeft(2, '0');
-      final minuteStr = picked.minute.toString().padLeft(2, '0');
-      onSelected('$hourStr:$minuteStr');
-    }
+    if (!mounted || picked == null) return;
+
+    final period = picked.hour >= 12 ? 'PM' : 'AM';
+    final h12 = picked.hour % 12 == 0 ? 12 : picked.hour % 12;
+    final formatted12 =
+        '${h12.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')} $period';
+
+    onSelected(formatted12);
   }
 
   Future<void> _handleAgencyDialog(
@@ -76,19 +124,24 @@ class _AdditionalSettingsViewState
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Info', style: TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text('Info',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           content: const Text(
             'By accepting this, the agency will provide you the packaging materials and control the packaging charges!',
-            style: TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: Color(0xFF333333)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2196F3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text('Accept', style: TextStyle(color: Colors.white)),
@@ -96,11 +149,79 @@ class _AdditionalSettingsViewState
           ],
         ),
       );
+      if (!mounted) return;
       if (ok == true) {
         controller.setAgencyResponsibility(true);
       }
     } else {
       controller.setAgencyResponsibility(false);
+    }
+  }
+
+  Future<void> _handleRemoveSlot(
+    AdditionalSettingsController controller,
+    int index,
+    int totalSlots,
+  ) async {
+    if (totalSlots <= 1) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text('Info',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: const Text(
+            'At least one shop time required when select Automatic Shop open /close',
+            style: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2196F3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Okay', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: const Text('BayFay',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: const Text(
+          'Do you want to remove the selected shop open & close timing?',
+          style: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2196F3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Yes', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      controller.removeTimeSlot(index);
     }
   }
 
@@ -152,7 +273,7 @@ class _AdditionalSettingsViewState
                 elevation: 0,
                 padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
               child: state.isSaving
@@ -178,6 +299,7 @@ class _AdditionalSettingsViewState
       ),
       body: Column(
         children: [
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE3E3E3)),
           if (isBusy)
             const LinearProgressIndicator(
               minHeight: 2.5,
@@ -186,301 +308,392 @@ class _AdditionalSettingsViewState
             ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Packaging Pricing Type
-                  _buildFieldLabel('Packaging Price Type: *'),
-                  const SizedBox(height: 4),
-                  Container(
-                    height: 40,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: isLocked ? Colors.grey.shade100 : Colors.white,
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: state.pricingType,
-                        isExpanded: true,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 1,
-                            child: Text('Price (INR )',
-                                style: TextStyle(fontSize: 13)),
-                          ),
-                          DropdownMenuItem(
-                            value: 2,
-                            child: Text('% (Percentage)',
-                                style: TextStyle(fontSize: 13)),
-                          ),
-                        ],
-                        onChanged: isLocked
-                            ? null
-                            : (val) {
-                                if (val != null) {
-                                  controller.setPricingType(val);
-                                }
-                              },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 2. Package Price
-                  _buildFieldLabel('Package Price: *'),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _priceController,
-                      enabled: !isLocked,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      onChanged: (val) {
-                        controller.setPackagePrice(
-                            double.tryParse(val) ?? 0.0);
-                      },
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black87),
-                      decoration: _inputDecoration(
-                        hintText: 'Enter package price',
-                        isLocked: isLocked,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 3. Minimum Purchase Limit
-                  Row(
-                    children: [
-                      _buildFieldLabel('Minimum Purchase Limit (Optional):'),
-                      const SizedBox(width: 6),
-                      Tooltip(
-                        message:
-                            'Applicable only when purchase amount is more than the limit',
-                        child: Icon(
-                          Icons.help_outline,
-                          size: 16,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _minLimitController,
-                      enabled: !isLocked,
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        controller.setMinLimit(int.tryParse(val));
-                      },
-                      style:
-                          const TextStyle(fontSize: 13, color: Colors.black87),
-                      decoration: _inputDecoration(
-                        hintText: 'Enter minimum purchase limit',
-                        isLocked: isLocked,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 4. Agency Responsibility Checkbox
-                  InkWell(
-                    onTap: () =>
-                        _handleAgencyDialog(controller, isLocked),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: state.agencyResponsibility,
-                            activeColor: const Color(0xFF2196F3),
-                            onChanged: (_) =>
-                                _handleAgencyDialog(controller, isLocked),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Agency Responsibility for Packaging',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade800,
+                  // SECTION 1: PACKAGING (Group Box with Overlapping Badge matching merchant_border_replacement)
+                  _buildSectionCard(
+                    title: 'Packaging',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Pricing Type Row
+                        Row(
+                          children: [
+                            const SizedBox(
+                              width: 110,
+                              child: Text(
+                                'Pricing Type :',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF616161),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                          Icon(
-                            isLocked ? Icons.lock : Icons.lock_open,
-                            size: 18,
-                            color: isLocked
-                                ? const Color(0xFF2196F3)
-                                : Colors.grey,
-                          ),
-                        ],
-                      ),
+                            Expanded(
+                              child: Container(
+                                height: 36,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: isLocked
+                                      ? const Color(0xFFF0F0F0)
+                                      : const Color(0xFFF7F7F7),
+                                  border: Border.all(
+                                      color: const Color(0xFFE0E0E0),
+                                      width: 0.5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: state.pricingType,
+                                    isExpanded: true,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 1,
+                                        child: Text('Price (INR )',
+                                            style: TextStyle(fontSize: 12)),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 2,
+                                        child: Text('% (Percentage)',
+                                            style: TextStyle(fontSize: 12)),
+                                      ),
+                                    ],
+                                    onChanged: isLocked
+                                        ? null
+                                        : (val) {
+                                            if (val != null) {
+                                              controller.setPricingType(val);
+                                            }
+                                          },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Packaging Price & Min Limit Row
+                        Row(
+                          children: [
+                            const SizedBox(
+                              width: 110,
+                              child: Text(
+                                'Packaging Price :',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF616161),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 5,
+                                    child: SizedBox(
+                                      height: 36,
+                                      child: TextField(
+                                        controller: _priceController,
+                                        enabled: !isLocked,
+                                        textAlign: TextAlign.center,
+                                        keyboardType: const TextInputType
+                                            .numberWithOptions(decimal: true),
+                                        onChanged: (val) {
+                                          controller.setPackagePrice(
+                                              double.tryParse(val) ?? 0.0);
+                                        },
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black87,
+                                        ),
+                                        decoration: _inputDecoration(
+                                          hintText: '0.00',
+                                          isLocked: isLocked,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    flex: 5,
+                                    child: SizedBox(
+                                      height: 36,
+                                      child: TextField(
+                                        controller: _minLimitController,
+                                        enabled: !isLocked,
+                                        textAlign: TextAlign.center,
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (val) {
+                                          controller
+                                              .setMinLimit(int.tryParse(val));
+                                        },
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black87,
+                                        ),
+                                        decoration: _inputDecoration(
+                                          hintText: 'Min. Limit',
+                                          isLocked: isLocked,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Tooltip(
+                                    message:
+                                        'Applicable only when purchase amount is more than the limit',
+                                    child: const Icon(
+                                      Icons.help_outline,
+                                      size: 18,
+                                      color: Color(0xFF2196F3),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Agency Responsibility Checkbox Row matching Android agency_responsible_lay
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Checkbox(
+                              value: state.agencyResponsibility,
+                              activeColor: const Color(0xFF2196F3),
+                              onChanged: (_) =>
+                                  _handleAgencyDialog(controller, isLocked),
+                            ),
+                            InkWell(
+                              onTap: () =>
+                                  _handleAgencyDialog(controller, isLocked),
+                              child: const Text(
+                                'Agency',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF333333),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Icon(
+                              isLocked ? Icons.lock : Icons.lock_open,
+                              size: 18,
+                              color: isLocked
+                                  ? const Color(0xFF2196F3)
+                                  : const Color(0xFF9E9E9E),
+                            ),
+                            const SizedBox(width: 10),
+                            Tooltip(
+                              message:
+                                  'The agency will provide you the packaging materials and control the packaging charges!',
+                              child: const Icon(
+                                Icons.help_outline,
+                                size: 18,
+                                color: Color(0xFF2196F3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // 5. Automatic Shop Open / Close
-                  if (state.allowAutoOpenClose) ...[
-                    const Divider(color: Color(0xFFE0E0E0), thickness: 1),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Automatic Shop Open / Close:',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
+                  // SECTION 2: SHOP TIMING
+                  if (state.allowAutoOpenClose)
+                    _buildSectionCard(
+                      title: 'Shop Timing',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Automatic Shop Open & Close:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF616161),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Switch(
+                                value: state.isAutomaticShopTiming,
+                                activeColor: const Color(0xFF2196F3),
+                                onChanged: controller.setAutomaticShopTiming,
+                              ),
+                            ],
                           ),
-                        ),
-                        Switch(
-                          value: state.isAutomaticShopTiming,
-                          activeColor: const Color(0xFF2196F3),
-                          onChanged: controller.setAutomaticShopTiming,
-                        ),
-                      ],
+
+                          if (state.isAutomaticShopTiming) ...[
+                            const SizedBox(height: 10),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: state.timingSlots.length,
+                              itemBuilder: (ctx, i) {
+                                final slot = state.timingSlots[i];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 6),
+                                  child: Row(
+                                    children: [
+                                      // Opening:
+                                      const Text(
+                                        'Opening:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF333333),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () => _pickTime(
+                                            context: context,
+                                            currentTime: slot.startTime,
+                                            onSelected: (time) => controller
+                                                .updateTimeSlot(i,
+                                                    startTime: time),
+                                          ),
+                                          child: Container(
+                                            height: 34,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: const Color(0xFFBDBDBD),
+                                                width: 0.6,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              _formatTo12Hour(slot.startTime),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFFE91E63),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+
+                                      // Closing:
+                                      const Text(
+                                        'Closing:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF333333),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () => _pickTime(
+                                            context: context,
+                                            currentTime: slot.endTime,
+                                            onSelected: (time) => controller
+                                                .updateTimeSlot(i,
+                                                    endTime: time),
+                                          ),
+                                          child: Container(
+                                            height: 34,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: const Color(0xFFBDBDBD),
+                                                width: 0.6,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              _formatTo12Hour(slot.endTime),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF03A9F4),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+
+                                      // Trash Clear Button matching ic_delete_icon
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Color(0xFFE53935),
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _handleRemoveSlot(
+                                          controller,
+                                          i,
+                                          state.timingSlots.length,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Add Another Time Slot Button matching Android add_time_bg
+                            OutlinedButton(
+                              onPressed: () {
+                                final added = controller.addTimeSlot();
+                                if (!added) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Enter Shop Open and Close time before adding another slot',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                    color: Color(0xFF2196F3), width: 1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                              ),
+                              child: const Text(
+                                'Add Another Time Slot',
+                                style: TextStyle(
+                                  color: Color(0xFF2196F3),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-
-                    if (state.isAutomaticShopTiming) ...[
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Shop Timings:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // List of time slots
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: state.timingSlots.length,
-                        itemBuilder: (ctx, i) {
-                          final slot = state.timingSlots[i];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                const Text('From: ',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2196F3))),
-                                InkWell(
-                                  onTap: () => _pickTime(
-                                    context: context,
-                                    currentTime: slot.startTime,
-                                    onSelected: (time) => controller
-                                        .updateTimeSlot(i, startTime: time),
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      slot.startTime.isNotEmpty
-                                          ? slot.startTime
-                                          : '00:00',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text('To: ',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2196F3))),
-                                InkWell(
-                                  onTap: () => _pickTime(
-                                    context: context,
-                                    currentTime: slot.endTime,
-                                    onSelected: (time) => controller
-                                        .updateTimeSlot(i, endTime: time),
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      slot.endTime.isNotEmpty
-                                          ? slot.endTime
-                                          : '00:00',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (state.timingSlots.length > 1)
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline,
-                                        size: 18, color: Colors.red),
-                                    onPressed: () =>
-                                        controller.removeTimeSlot(i),
-                                  ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            final ok = controller.addTimeSlot();
-                            if (!ok) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Enter Shop Open and Close time before adding another'),
-                                ),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text(
-                            'Add another time slot',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -490,39 +703,67 @@ class _AdditionalSettingsViewState
     );
   }
 
-  Widget _buildFieldLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF333333),
-      ),
+  Widget _buildSectionCard({
+    required String title,
+    required Widget child,
+  }) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFF4CAF50), width: 1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: child,
+        ),
+        Positioned(
+          left: 20,
+          top: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            color: Colors.white,
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6F6F6F),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   InputDecoration _inputDecoration({
     required String hintText,
-    bool isLocked = false,
+    required bool isLocked,
   }) {
     return InputDecoration(
-      filled: isLocked,
-      fillColor: isLocked ? Colors.grey.shade100 : null,
+      filled: true,
+      fillColor: isLocked ? const Color(0xFFF0F0F0) : const Color(0xFFF7F7F7),
       counterText: '',
       hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.2),
       ),
     );
   }
